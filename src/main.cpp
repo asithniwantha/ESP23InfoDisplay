@@ -46,6 +46,9 @@ void setup() {
 }
 
 void loop() {
+    // Handle LVGL tasks
+    displayManager.tick();
+    
     // Handle incoming UDP packets
     String packet = networkManager.getReceivedPacket();
     if (packet.length() > 0) {

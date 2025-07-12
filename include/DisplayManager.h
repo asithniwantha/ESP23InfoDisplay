@@ -1,18 +1,18 @@
 #ifndef DISPLAY_MANAGER_H
 #define DISPLAY_MANAGER_H
 
-#include <TFT_eSPI.h>
+#include <lvgl.h>
 #include <ArduinoJson.h>
 #include "SystemData.h"
 #include "Defines.h"
-#include "UIRenderer.h"
-#include "GraphRenderer.h"
-#include "ScreenManager.h"
+#include "LVGLDriver.h"
+#include "LVGLUIManager.h"
 
 class DisplayManager {
 public:
     DisplayManager();
     void begin();
+    void tick();
     void showStartupScreen();
     void displayWiFiInfo(String ip, String mdns, int port);
     void displayUDPText(String text);
@@ -21,18 +21,9 @@ public:
     void resetUIState();
 
 private:
-    TFT_eSPI tft;
-    UIRenderer uiRenderer;
-    GraphRenderer graphRenderer;
-    ScreenManager screenManager;
+    LVGLDriver lvglDriver;
+    LVGLUIManager uiManager;
     bool uiInitialized = false;
-    SystemStats lastDrawnStats;
-    
-    void initializeUI();
-    void drawInitialUIElements();
-    void updateCards(SystemStats& stats, SystemData& data);
-    void updateProgressBars(SystemStats& stats);
-    void updateBottomSection(SystemData& data);
 };
 
 #endif // DISPLAY_MANAGER_H
