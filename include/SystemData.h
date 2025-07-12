@@ -34,6 +34,9 @@ public:
     // New methods for scrolling graphs
     void getScrollingData(float* destArray, float* sourceArray, int maxPoints);
     int getDataPointsToShow();
+    
+    // Helper method for formatting network speed
+    String getFormattedNetworkSpeed();
 
 private:
     SystemStats currentData;

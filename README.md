@@ -122,6 +122,11 @@ The system receives monitoring data via UDP on port 12345. Send JSON formatted d
 }
 ```
 
+**Network Speed Display:**
+- Values < 1 MB/s: Displayed in KB/s (e.g., "256.5KB/s", "15KB/s")  
+- Values ≥ 1 MB/s: Displayed in MB/s (e.g., "2.5MB/s", "15MB/s")
+- Automatic unit selection for optimal readability
+
 ### Sample Python Data Sender
 ```python
 import socket
@@ -133,18 +138,37 @@ def send_system_data():
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     esp32_ip = "192.168.1.100"  # Your ESP32 IP
     
+    # For real-time network speed calculation
+    last_net_io = None
+    last_time = None
+    
     while True:
+        # Calculate real network speed
+        current_time = time.time()
+        current_net_io = psutil.net_io_counters()
+        network_speed = 0.0
+        
+        if last_net_io and last_time:
+            time_diff = current_time - last_time
+            if time_diff > 0:
+                bytes_diff = (current_net_io.bytes_sent + current_net_io.bytes_recv) - \
+                           (last_net_io.bytes_sent + last_net_io.bytes_recv)
+                network_speed = (bytes_diff / time_diff) / (1024 * 1024)  # MB/s
+        
         data = {
             "cpu": psutil.cpu_percent(),
             "ram": psutil.virtual_memory().percent,
             "disk": psutil.disk_usage('/').percent,
-            "temp": psutil.sensors_temperatures()['coretemp'][0].current,
-            "network": psutil.net_io_counters().bytes_sent / 1024 / 1024,
-            "volume": 50,  # Add your volume detection
+            "temp": 45,  # Add your temperature detection
+            "network": round(network_speed, 2),
+            "volume": 50,  # Add your volume detection  
             "time": time.strftime("%H:%M:%S")
         }
         
         sock.sendto(json.dumps(data).encode(), (esp32_ip, 12345))
+        
+        last_net_io = current_net_io
+        last_time = current_time
         time.sleep(1)
 
 if __name__ == "__main__":
@@ -166,6 +190,10 @@ if __name__ == "__main__":
 │ RAM: ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~    │ Row 5 (y=168)  
 │ TEMP:~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~    │ Row 6 (y=200)
 └─────────────────────────────────────────────────┘
+
+**Network Speed Display Examples:**
+- Low speed: "156KB/s", "2.3KB/s"
+- High speed: "5.2MB/s", "25MB/s"
 ```
 
 ## 🏗️ Architecture

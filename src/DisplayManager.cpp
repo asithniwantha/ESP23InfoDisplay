@@ -46,7 +46,7 @@ void DisplayManager::displayModernUI(SystemData& data) {
     }
     
     // Update only sections that have changed
-    updateCards(stats);
+    updateCards(stats, data);
     updateProgressBars(stats);
     updateBottomSection(data);
     
@@ -109,7 +109,7 @@ void DisplayManager::drawInitialUIElements() {
     
     // Row 3: Draw info cards with default values
     cardX = LEFT_MARGIN;
-    uiRenderer.drawCard(cardX, INFO_CARDS_Y, CARD_WIDTH, INFO_CARD_HEIGHT, "Net", "0.0MB/s", COLOR_INFO);
+    uiRenderer.drawCard(cardX, INFO_CARDS_Y, CARD_WIDTH, INFO_CARD_HEIGHT, "Net", "0KB/s", COLOR_INFO);
     cardX += CARD_WIDTH + CARD_SPACING;
     
     uiRenderer.drawCard(cardX, INFO_CARDS_Y, CARD_WIDTH, INFO_CARD_HEIGHT, "Vol", "0%", COLOR_PRIMARY);
@@ -134,7 +134,7 @@ void DisplayManager::drawInitialUIElements() {
     tft.drawString("0°", LEFT_MARGIN + GRAPH_WIDTH - 32, GRAPH_START_Y + (GRAPH_SPACING * 2) + (GRAPH_HEIGHT - 8) / 2, 1);
 }
 
-void DisplayManager::updateCards(SystemStats& stats) {
+void DisplayManager::updateCards(SystemStats& stats, SystemData& data) {
     // Define consistent layout constants
     const int LEFT_MARGIN = 5;
     const int CARD_SPACING = 5;
@@ -179,7 +179,7 @@ void DisplayManager::updateCards(SystemStats& stats) {
     const int INFO_CARD_HEIGHT = 20;
     
     if (abs(stats.networkSpeed - lastDrawnStats.networkSpeed) > 0.1) {
-        uiRenderer.drawCard(cardX, INFO_CARDS_Y_NEW, CARD_WIDTH, INFO_CARD_HEIGHT, "Net", String(stats.networkSpeed, 1) + "MB/s", COLOR_INFO);
+        uiRenderer.drawCard(cardX, INFO_CARDS_Y_NEW, CARD_WIDTH, INFO_CARD_HEIGHT, "Net", data.getFormattedNetworkSpeed(), COLOR_INFO);
     }
     cardX += CARD_WIDTH + CARD_SPACING;
     

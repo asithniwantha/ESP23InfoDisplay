@@ -18,18 +18,24 @@ void SystemData::update(String jsonData) {
         return;
     }
 
-    currentData.cpuUsage = doc["CpuUsage"];
-    currentData.ramUsage = doc["RamUsage"];
-    currentData.diskUsage = doc["DiskUsage"];
-    currentData.networkSpeed = doc["NetworkSpeed"];
-    currentData.volumeLevel = doc["VolumeLevel"];
-    currentData.cpuTemp = doc["CpuTemperature"];
+    currentData.cpuUsage = doc["CpuUsage"] | doc["cpu"];
+    currentData.ramUsage = doc["RamUsage"] | doc["ram"];
+    currentData.diskUsage = doc["DiskUsage"] | doc["disk"];
+    currentData.networkSpeed = doc["NetworkSpeed"] | doc["network"];
+    currentData.volumeLevel = doc["VolumeLevel"] | doc["volume"];
+    currentData.cpuTemp = doc["CpuTemperature"] | doc["temp"];
     
-    String timestamp = doc["Timestamp"];
-    int timeStart = timestamp.indexOf('T') + 1;
-    int timeEnd = timestamp.indexOf('.');
-    if (timeStart > 0 && timeEnd > timeStart) {
-        currentData.lastTime = timestamp.substring(timeStart, timeEnd);
+    String timestamp = doc["Timestamp"] | doc["time"];
+    if (timestamp.length() > 0) {
+        // Handle different timestamp formats
+        int timeStart = timestamp.indexOf('T') + 1;
+        int timeEnd = timestamp.indexOf('.');
+        if (timeStart > 0 && timeEnd > timeStart) {
+            currentData.lastTime = timestamp.substring(timeStart, timeEnd);
+        } else {
+            // Simple time format (HH:MM:SS)
+            currentData.lastTime = timestamp;
+        }
     }
 
     addToHistory(currentData.cpuUsage, currentData.ramUsage, currentData.cpuTemp);
@@ -120,4 +126,29 @@ void SystemData::getScrollingData(float* destArray, float* sourceArray, int maxP
 
 int SystemData::getDataPointsToShow() {
     return historyFull ? HISTORY_SIZE : historyIndex;
+}
+
+String SystemData::getFormattedNetworkSpeed() {
+    if (currentData.networkSpeed < 0) {
+        return "0KB/s";
+    }
+    
+    // Convert from MB/s to KB/s for better granularity
+    float speedKBps = currentData.networkSpeed * 1024;
+    
+    if (speedKBps < 1024) {
+        // Less than 1 MB/s, show in KB/s
+        if (speedKBps < 10) {
+            return String(speedKBps, 1) + "KB/s";
+        } else {
+            return String((int)speedKBps) + "KB/s";
+        }
+    } else {
+        // 1 MB/s or more, show in MB/s
+        if (currentData.networkSpeed < 10) {
+            return String(currentData.networkSpeed, 1) + "MB/s";
+        } else {
+            return String((int)currentData.networkSpeed) + "MB/s";
+        }
+    }
 }

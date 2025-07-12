@@ -30,7 +30,7 @@ private:
     
     void initializeUI();
     void drawInitialUIElements();
-    void updateCards(SystemStats& stats);
+    void updateCards(SystemStats& stats, SystemData& data);
     void updateProgressBars(SystemStats& stats);
     void updateBottomSection(SystemData& data);
 };
