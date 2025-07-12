@@ -181,11 +181,12 @@ void LVGLUIManager::createInfoCards() {
 }
 
 void LVGLUIManager::createCharts() {
-    const int chart_width = 275;
+    const int chart_width = 255;  // Reduced width to make room for icons
     const int chart_height = 25;
     const int chart_spacing = 32;
     const int start_x = 5;
     const int start_y = 125;
+    const int icon_x = start_x + chart_width + 8;  // Icon position
     
     // CPU Chart
     cpu_chart = lv_chart_create(main_screen);
@@ -200,6 +201,13 @@ void LVGLUIManager::createCharts() {
     lv_obj_set_style_line_width(cpu_chart, 2, LV_PART_ITEMS);
     lv_obj_set_style_size(cpu_chart, 3, LV_PART_INDICATOR);
     
+    // CPU Icon
+    lv_obj_t* cpu_icon = lv_label_create(main_screen);
+    lv_label_set_text(cpu_icon, LV_SYMBOL_SETTINGS);
+    lv_obj_set_style_text_color(cpu_icon, UI_COLOR_SUCCESS, 0);
+    lv_obj_set_style_text_font(cpu_icon, &lv_font_montserrat_16, 0);
+    lv_obj_set_pos(cpu_icon, icon_x, start_y + 4);
+    
     // RAM Chart
     ram_chart = lv_chart_create(main_screen);
     lv_obj_set_size(ram_chart, chart_width, chart_height);
@@ -213,6 +221,13 @@ void LVGLUIManager::createCharts() {
     lv_obj_set_style_line_width(ram_chart, 2, LV_PART_ITEMS);
     lv_obj_set_style_size(ram_chart, 3, LV_PART_INDICATOR);
     
+    // RAM Icon
+    lv_obj_t* ram_icon = lv_label_create(main_screen);
+    lv_label_set_text(ram_icon, LV_SYMBOL_LIST);
+    lv_obj_set_style_text_color(ram_icon, UI_COLOR_SUCCESS, 0);
+    lv_obj_set_style_text_font(ram_icon, &lv_font_montserrat_16, 0);
+    lv_obj_set_pos(ram_icon, icon_x, start_y + chart_spacing + 4);
+    
     // Temperature Chart
     temp_chart = lv_chart_create(main_screen);
     lv_obj_set_size(temp_chart, chart_width, chart_height);
@@ -225,6 +240,13 @@ void LVGLUIManager::createCharts() {
     temp_series = lv_chart_add_series(temp_chart, UI_COLOR_DANGER, LV_CHART_AXIS_PRIMARY_Y);
     lv_obj_set_style_line_width(temp_chart, 2, LV_PART_ITEMS);
     lv_obj_set_style_size(temp_chart, 3, LV_PART_INDICATOR);
+    
+    // Temperature Icon
+    lv_obj_t* temp_icon = lv_label_create(main_screen);
+    lv_label_set_text(temp_icon, LV_SYMBOL_WARNING);
+    lv_obj_set_style_text_color(temp_icon, UI_COLOR_DANGER, 0);
+    lv_obj_set_style_text_font(temp_icon, &lv_font_montserrat_16, 0);
+    lv_obj_set_pos(temp_icon, icon_x, start_y + 2 * chart_spacing + 4);
 }
 
 lv_obj_t* LVGLUIManager::createCard(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_coord_t h, const char* title) {
@@ -264,15 +286,27 @@ void LVGLUIManager::updateChart(lv_chart_series_t* series, int32_t value) {
 }
 
 void LVGLUIManager::updateAllCharts(int32_t cpu_val, int32_t ram_val, int32_t temp_val) {
-    // Update all charts simultaneously for smoother animation
-    lv_chart_set_next_value(cpu_chart, cpu_series, cpu_val);
-    lv_chart_set_next_value(ram_chart, ram_series, ram_val);
-    lv_chart_set_next_value(temp_chart, temp_series, temp_val);
-    
-    // Refresh all charts at once
-    lv_chart_refresh(cpu_chart);
-    lv_chart_refresh(ram_chart);
-    lv_chart_refresh(temp_chart);
+    // Update main charts if in normal mode
+    if (!isFullScreenMode) {
+        lv_chart_set_next_value(cpu_chart, cpu_series, cpu_val);
+        lv_chart_set_next_value(ram_chart, ram_series, ram_val);
+        lv_chart_set_next_value(temp_chart, temp_series, temp_val);
+        
+        // Refresh all charts at once
+        lv_chart_refresh(cpu_chart);
+        lv_chart_refresh(ram_chart);
+        lv_chart_refresh(temp_chart);
+    } else {
+        // Update full screen chart if in full screen mode
+        if (currentFullScreenChart == 0) {
+            lv_chart_set_next_value(fullscreen_chart, fullscreen_series, cpu_val);
+        } else if (currentFullScreenChart == 1) {
+            lv_chart_set_next_value(fullscreen_chart, fullscreen_series, ram_val);
+        } else if (currentFullScreenChart == 2) {
+            lv_chart_set_next_value(fullscreen_chart, fullscreen_series, temp_val);
+        }
+        lv_chart_refresh(fullscreen_chart);
+    }
 }
 
 void LVGLUIManager::updateUI(SystemData& data) {
@@ -435,4 +469,128 @@ void LVGLUIManager::showTouchDebug(int x, int y, int z) {
         
         lv_scr_load(main_screen);
     }
+}
+
+void LVGLUIManager::handleTouch(int x, int y) {
+    if (!ui_initialized) return;
+    
+    // If in full screen mode, return to main UI
+    if (isFullScreenMode) {
+        returnToMainUI();
+        return;
+    }
+    
+    // Chart touch detection (charts start at y=125, height=25, spacing=32)
+    if (x >= 5 && x <= 260 && y >= 125) { // Within chart area
+        if (y >= 125 && y <= 150) {
+            // CPU chart touched
+            showFullScreenChart(0);
+        } else if (y >= 157 && y <= 182) {
+            // RAM chart touched  
+            showFullScreenChart(1);
+        } else if (y >= 189 && y <= 214) {
+            // Temperature chart touched
+            showFullScreenChart(2);
+        }
+    }
+    
+    // Card touch detection
+    else if (y >= 25 && y <= 60) { // Main cards area
+        if (x >= 5 && x <= 80) {
+            // CPU card touched
+            showFullScreenChart(0);
+        } else if (x >= 85 && x <= 160) {
+            // RAM card touched
+            showFullScreenChart(1);
+        } else if (x >= 165 && x <= 240) {
+            // DISK card touched - show disk info
+            showFullScreenChart(3);
+        } else if (x >= 245 && x <= 320) {
+            // TEMP card touched
+            showFullScreenChart(2);
+        }
+    }
+}
+
+void LVGLUIManager::showFullScreenChart(int chartType) {
+    if (!ui_initialized) return;
+    
+    isFullScreenMode = true;
+    currentFullScreenChart = chartType;
+    
+    // Clear main screen
+    lv_obj_clean(main_screen);
+    
+    // Create full screen chart
+    fullscreen_chart = lv_chart_create(main_screen);
+    lv_obj_set_size(fullscreen_chart, SCREEN_WIDTH - 20, SCREEN_HEIGHT - 60);
+    lv_obj_set_pos(fullscreen_chart, 10, 30);
+    lv_obj_add_style(fullscreen_chart, &style_chart, 0);
+    lv_chart_set_type(fullscreen_chart, LV_CHART_TYPE_LINE);
+    lv_chart_set_point_count(fullscreen_chart, 50);
+    lv_chart_set_update_mode(fullscreen_chart, LV_CHART_UPDATE_MODE_SHIFT);
+    
+    // Create title and configure based on chart type
+    lv_obj_t* title_label = lv_label_create(main_screen);
+    lv_obj_set_style_text_font(title_label, &lv_font_montserrat_16, 0);
+    lv_obj_set_pos(title_label, 10, 5);
+    
+    switch(chartType) {
+        case 0: // CPU
+            lv_label_set_text(title_label, LV_SYMBOL_SETTINGS " CPU Usage History");
+            lv_obj_set_style_text_color(title_label, UI_COLOR_SUCCESS, 0);
+            lv_chart_set_range(fullscreen_chart, LV_CHART_AXIS_PRIMARY_Y, 0, 100);
+            fullscreen_series = lv_chart_add_series(fullscreen_chart, UI_COLOR_SUCCESS, LV_CHART_AXIS_PRIMARY_Y);
+            break;
+        case 1: // RAM
+            lv_label_set_text(title_label, LV_SYMBOL_LIST " RAM Usage History");
+            lv_obj_set_style_text_color(title_label, UI_COLOR_SUCCESS, 0);
+            lv_chart_set_range(fullscreen_chart, LV_CHART_AXIS_PRIMARY_Y, 0, 100);
+            fullscreen_series = lv_chart_add_series(fullscreen_chart, UI_COLOR_SUCCESS, LV_CHART_AXIS_PRIMARY_Y);
+            break;
+        case 2: // Temperature
+            lv_label_set_text(title_label, LV_SYMBOL_WARNING " Temperature History");
+            lv_obj_set_style_text_color(title_label, UI_COLOR_DANGER, 0);
+            lv_chart_set_range(fullscreen_chart, LV_CHART_AXIS_PRIMARY_Y, 0, 100);
+            fullscreen_series = lv_chart_add_series(fullscreen_chart, UI_COLOR_DANGER, LV_CHART_AXIS_PRIMARY_Y);
+            break;
+        case 3: // Disk
+            lv_label_set_text(title_label, LV_SYMBOL_DRIVE " Disk Usage");
+            lv_obj_set_style_text_color(title_label, UI_COLOR_WARNING, 0);
+            lv_chart_set_range(fullscreen_chart, LV_CHART_AXIS_PRIMARY_Y, 0, 100);
+            fullscreen_series = lv_chart_add_series(fullscreen_chart, UI_COLOR_WARNING, LV_CHART_AXIS_PRIMARY_Y);
+            break;
+    }
+    
+    // Add instructions
+    lv_obj_t* instruction_label = lv_label_create(main_screen);
+    lv_label_set_text(instruction_label, "Touch anywhere to return");
+    lv_obj_set_style_text_color(instruction_label, UI_COLOR_MUTED, 0);
+    lv_obj_set_style_text_font(instruction_label, &lv_font_montserrat_12, 0);
+    lv_obj_set_pos(instruction_label, SCREEN_WIDTH - 150, 5);
+    
+    // Copy existing chart data if available (simplified approach)
+    // Initialize with some sample data for demonstration
+    for (int i = 0; i < 20; i++) {
+        lv_chart_set_next_value(fullscreen_chart, fullscreen_series, 0);
+    }
+    
+    lv_scr_load(main_screen);
+}
+
+void LVGLUIManager::returnToMainUI() {
+    if (!isFullScreenMode) return;
+    
+    isFullScreenMode = false;
+    currentFullScreenChart = -1;
+    
+    // Recreate the main UI
+    lv_obj_clean(main_screen);
+    createStatusBar();
+    createSystemCards();
+    createProgressBars();
+    createInfoCards();
+    createCharts();
+    
+    lv_scr_load(main_screen);
 }

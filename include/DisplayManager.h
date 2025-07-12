@@ -18,6 +18,7 @@ public:
     void displayUDPText(String text);
     void displayModernUI(SystemData& data);
     void printTouchToDisplay(int x, int y, int z);
+    void handleElementTouch(int x, int y);
     void resetUIState();
 
 private:

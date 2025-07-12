@@ -33,6 +33,10 @@ void DisplayManager::printTouchToDisplay(int x, int y, int z) {
     uiInitialized = false; // Reset state for future UI changes
 }
 
+void DisplayManager::handleElementTouch(int x, int y) {
+    uiManager.handleTouch(x, y);
+}
+
 void DisplayManager::resetUIState() {
     uiInitialized = false;
 }

@@ -13,6 +13,9 @@ public:
     void showWiFiInfo(String ip, String mdns, int port);
     void showUDPText(String text);
     void showTouchDebug(int x, int y, int z);
+    void handleTouch(int x, int y);
+    void showFullScreenChart(int chartType);
+    void returnToMainUI();
     
 private:
     // Main screen objects
@@ -76,6 +79,12 @@ private:
     SystemStats lastStats;
     unsigned long lastForceUpdate = 0;
     static const unsigned long FORCE_UPDATE_INTERVAL = 5000; // Force update every 5 seconds
+    
+    // Full screen chart state
+    bool isFullScreenMode = false;
+    int currentFullScreenChart = -1; // -1: none, 0: CPU, 1: RAM, 2: TEMP
+    lv_obj_t* fullscreen_chart;
+    lv_chart_series_t* fullscreen_series;
 };
 
 #endif // LVGL_UI_MANAGER_H

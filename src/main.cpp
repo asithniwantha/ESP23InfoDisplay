@@ -72,8 +72,7 @@ void loop() {
         touchManager.calibrate(p);
         
         touchManager.printToSerial(p.x, p.y, p.z);
-        displayManager.printTouchToDisplay(p.x, p.y, p.z);
-        systemData.reset(); // Reset for next JSON display
+        displayManager.handleElementTouch(p.x, p.y);
 
         delay(100); // Debounce
     }
