@@ -129,8 +129,9 @@ The system receives monitoring data via UDP on port 12345. Send JSON formatted d
 
 ```
 
-## 🎨 UI Layout
+## 🎨 UI Layout & Display Elements
 
+### Main Dashboard Layout
 ```
 ┌─────────────────────────────────────────────────┐
 │ Status Bar (Time, WiFi, IP)                     │ Row 0
@@ -138,17 +139,104 @@ The system receives monitoring data via UDP on port 12345. Send JSON formatted d
 │ [CPU] [RAM] [DISK] [TEMP]                      │ Row 1 (y=25)
 │ [████] [███ ] [██  ] [█   ]                     │ Row 2 (y=65)
 ├─────────────────────────────────────────────────┤
-│ [Net] [Vol]     Updated: 14:30:25              │ Row 3 (y=90)
+│ [Net: 2.5MB/s] [Vol: 75%]  Updated: 14:30:25   │ Row 3 (y=85)
 ├─────────────────────────────────────────────────┤
-│ CPU: ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~    │ Row 4 (y=136)
-│ RAM: ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~    │ Row 5 (y=168)  
-│ TEMP:~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~    │ Row 6 (y=200)
+│ 📊 CPU: ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  │ Row 4 (y=125)
+│ 🔹 RAM: ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  │ Row 5 (y=157)  
+│ 🌡️ TEMP:~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  │ Row 6 (y=189)
 └─────────────────────────────────────────────────┘
+```
+
+### 📊 Display Elements Overview
+
+#### **Status Bar (Top Row)**
+- **Current Time**: Real-time clock display (HH:MM:SS format)
+- **WiFi Status**: Connection indicator with signal strength
+- **IP Address**: Current network IP for UDP data reception
+- **mDNS Name**: Device hostname for network discovery
+
+#### **System Metric Cards (75×35px each)**
+| Card | Display | Color Coding | Range |
+|------|---------|--------------|-------|
+| **CPU** | Percentage usage | 🟢 <60% → 🟡 60-80% → 🔴 >80% | 0-100% |
+| **RAM** | Memory utilization | 🟢 <60% → 🟡 60-80% → 🔴 >80% | 0-100% |
+| **DISK** | Storage usage | 🟢 <60% → 🟡 60-80% → 🔴 >80% | 0-100% |
+| **TEMP** | System temperature | 🟢 <50°C → 🟡 50-70°C → 🔴 >70°C | 0-100°C |
+
+#### **Progress Bars (75×8px each)**
+- Visual representation of each metric below the cards
+- Animated fill with gradient colors
+- Smooth transitions between states
+- Real-time updates with anti-flicker technology
+
+#### **Information Cards (120×30px each)**
+| Card | Format | Examples | Auto-Scaling |
+|------|--------|----------|--------------|
+| **Network Speed** | Auto KB/s or MB/s | `156KB/s`, `2.5MB/s` | <1MB = KB/s, ≥1MB = MB/s |
+| **Volume Level** | Percentage | `Vol: 75%`, `Vol: 0%` | 0-100% with mute detection |
+
+#### **Real-time Charts (255×25px each)**
+| Chart | Icon | Data Points | Update Rate | Color |
+|-------|------|-------------|-------------|-------|
+| **CPU Usage** | 📊 | 50 points | 1Hz | Dynamic (green/yellow/red) |
+| **RAM Usage** | 🔹 | 50 points | 1Hz | Blue gradient |
+| **Temperature** | 🌡️ | 50 points | 1Hz | Heat map (blue→red) |
+
+### 🎮 Interactive Elements
+
+#### **Touch Zones**
+- **System Cards**: Tap any card (CPU/RAM/DISK/TEMP) for full-screen view
+- **Charts**: Tap any chart area for expanded graph display
+- **Coordinate Mapping**: Precise touch detection with visual feedback
+
+#### **Full-Screen Views**
+```
+When touched, any element expands to full-screen:
+
+┌─────────────────────────────────────────────────┐
+│                 CPU USAGE                       │
+│                                                 │
+│     ████████████████████████████████████        │
+│         45.2%                                   │
+│                                                 │
+│  ||||||||||||||||||||||||||||||||||||||||||||  │
+│  Real-time scrolling graph (50 data points)    │
+│                                                 │
+│              Tap to return                      │
+└─────────────────────────────────────────────────┘
+```
+
+### 🎨 Visual Design Features
+
+#### **Color Schemes**
+```cpp
+Background:     Dark blue (#0841)
+Cards:          Charcoal (#1082)
+Success:        Green (#07E0)   - Normal operation
+Warning:        Yellow (#FFE0)  - Attention needed
+Danger:         Red (#F800)     - Critical levels
+Info:           Light blue (#867F)
+Text:           White (#FFFF)
+Muted:          Gray (#8410)
+```
+
+#### **Typography & Icons**
+- **Font**: Clean, readable system font
+- **Icons**: Emoji-based indicators (📊🔹🌡️) for chart identification
+- **Size**: Optimized for 2.8" displays with clear visibility
+- **Contrast**: High contrast ratios for outdoor visibility
+
+#### **Animation & Effects**
+- **Smooth Scrolling**: Task Manager-style graph animation
+- **Fade Transitions**: Gentle color changes between states
+- **Anti-flicker**: Only updates changed regions
+- **Responsive**: Immediate feedback on touch interactions
 
 **Network Speed Display Examples:**
 - Low speed: "156KB/s", "2.3KB/s"
 - High speed: "5.2MB/s", "25MB/s"
-```
+- Zero activity: "0KB/s" (gray text)
+- Peak values: "125MB/s" (highlighted)
 
 ## 🏗️ Architecture
 
