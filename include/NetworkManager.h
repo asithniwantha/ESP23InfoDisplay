@@ -4,6 +4,7 @@
 #include <WiFi.h>
 #include <WiFiUdp.h>
 #include <ESPmDNS.h>
+#include <time.h>
 
 class NetworkManager {
 public:
@@ -13,6 +14,12 @@ public:
     String getRemoteIP();
     int getRemotePort();
     String getLocalIP();
+    void syncTime();
+    bool isTimeSync();
+    String getCurrentTime();
+    String getCurrentDate();
+    String getCurrentTime12Hour(); // 12-hour format with AM/PM
+    String getAMPM(); // Get AM/PM separately for styling
 
 private:
     const char* ssid;
@@ -21,6 +28,7 @@ private:
     int udpPort;
     WiFiUDP udp;
     char incomingPacket[255];
+    bool timesSynced;
 };
 
 #endif // NETWORK_MANAGER_H

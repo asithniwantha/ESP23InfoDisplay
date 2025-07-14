@@ -5,6 +5,9 @@
 #include "SystemData.h"
 #include "UIConfig.h"
 
+// Forward declaration
+class NetworkManager;
+
 class LVGLUIManager {
 public:
     LVGLUIManager();
@@ -18,11 +21,18 @@ public:
     void showFullScreenChart(int chartType);
     void returnToMainUI();
     void handleVolumeTouch(int x, int y, SystemData& data);
+    void showClockScreen();
+    void updateClockScreen();
+    void updateClockScreen(NetworkManager* networkManager);
+    bool hasRecentData();
+    void setDataReceived();
+    void checkDataTimeout(); // Check if we should switch to clock due to timeout
     
 private:
     // Main screen objects
     lv_obj_t* main_screen;
     lv_obj_t* startup_screen;
+    lv_obj_t* clock_screen;
     
     // Landscape layout cards (top row)
     lv_obj_t* cpu_card;
@@ -55,6 +65,12 @@ private:
     lv_obj_t* network_label;
     lv_obj_t* volume_label;
     
+    // Clock screen objects
+    lv_obj_t* clock_time_label;
+    lv_obj_t* clock_date_label;
+    lv_obj_t* clock_status_label;
+    lv_obj_t* clock_ampm_label;  // AM/PM indicator
+    
     // Helper methods
     void createMainScreen();
     void createLandscapeUI();
@@ -81,6 +97,8 @@ private:
     bool ui_initialized = false;
     SystemStats lastStats;
     unsigned long lastForceUpdate = 0;
+    unsigned long lastDataReceived = 0;
+    bool isClockMode = false;
     
     // Full screen chart state
     bool isFullScreenMode = false;

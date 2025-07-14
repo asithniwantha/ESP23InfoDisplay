@@ -44,7 +44,7 @@ namespace UILayout {
     constexpr int VOLUME_CONTROL_Y = BOTTOM_ROW_Y;
     
     // Chart configurations
-    constexpr int CPU_CHART_POINTS = 80;
+    constexpr int CPU_CHART_POINTS = 160;  // Increased for more data points
     constexpr int NETWORK_CHART_POINTS = 40;
     
     // Temperature gauge (reduced size for smaller cards)

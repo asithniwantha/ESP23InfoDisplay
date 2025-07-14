@@ -6,6 +6,7 @@
     - TouchManager: Touchscreen handling
 */
 
+#include <TFT_eSPI.h>
 #include "Defines.h"
 #include "DisplayManager.h"
 #include "NetworkManager.h"
@@ -36,9 +37,12 @@ void setup() {
 
     // Initialize network
     networkManager.begin();
+    
+    // Brief WiFi info display (2 seconds)
     displayManager.displayWiFiInfo(networkManager.getLocalIP(), 
                                    NetworkConfig::MDNS_HOSTNAME, 
                                    NetworkConfig::UDP_PORT);
+    delay(2000);
 
     // Initialize touchscreen
     touchManager.begin();
@@ -46,7 +50,11 @@ void setup() {
     // Initialize system data
     systemData.reset();
     
+    // Show clock screen after all initialization is complete
+    displayManager.showClockAfterSetup();
+    
     Serial.println("System initialized successfully!");
+    Serial.println("Showing clock until UDP data received...");
 }
 
 void loop() {
@@ -87,6 +95,12 @@ void loop() {
 
         delay(100); // Debounce
     }
+    
+    // Check for data timeout and switch to clock if needed
+    displayManager.checkDataTimeout();
+    
+    // Update clock display if no recent data
+    displayManager.updateClock(&networkManager);
 
     delay(10); // Small delay to prevent CPU overload
 }

@@ -49,6 +49,9 @@ void DisplayManager::displayModernUI(SystemData& data) {
         uiInitialized = true;
     }
     
+    // Mark that we've received data
+    uiManager.setDataReceived();
+    
     uiManager.updateUI(data);
 }
 
@@ -72,4 +75,20 @@ void DisplayManager::onVolumeChanged(int newVolume) {
     // This could send a UDP command to change system volume
     // For now, just log the change
     Serial.printf("Volume control: Setting volume to %d%%\n", newVolume);
+}
+
+void DisplayManager::updateClock() {
+    uiManager.updateClockScreen();
+}
+
+void DisplayManager::updateClock(NetworkManager* networkManager) {
+    uiManager.updateClockScreen(networkManager);
+}
+
+void DisplayManager::showClockAfterSetup() {
+    uiManager.showClockScreen();
+}
+
+void DisplayManager::checkDataTimeout() {
+    uiManager.checkDataTimeout();
 }

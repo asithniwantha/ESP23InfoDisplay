@@ -9,6 +9,9 @@
 #include "LVGLDriver.h"
 #include "LVGLUIManager.h"
 
+// Forward declaration
+class NetworkManager;
+
 class DisplayManager {
 public:
     DisplayManager();
@@ -21,6 +24,10 @@ public:
     void printTouchToDisplay(int x, int y, int z);
     void handleElementTouch(int x, int y);
     void resetUIState();
+    void updateClock(); // For updating clock when no data
+    void updateClock(NetworkManager* networkManager); // Overloaded with NetworkManager
+    void showClockAfterSetup(); // Show clock after setup is complete
+    void checkDataTimeout(); // Check if we should switch to clock due to timeout
     
     // Volume control methods
     void handleVolumeTouch(int x, int y, SystemData& data);

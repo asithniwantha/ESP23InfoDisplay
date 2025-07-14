@@ -12,6 +12,8 @@ void LVGLDriver::init() {
     // Initialize TFT
     tft.init();
     tft.setRotation(1);
+    tft.invertDisplay( true );
+    tft.fillScreen(TFT_BLACK);
     
     // Initialize touch
     ts.begin();

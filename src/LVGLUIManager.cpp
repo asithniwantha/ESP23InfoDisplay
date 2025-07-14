@@ -1,5 +1,6 @@
 #include "LVGLUIManager.h"
 #include "UIConfig.h"
+#include "NetworkManager.h"
 
 // Modern color palette using UIConfig constants
 #define UI_COLOR_PRIMARY   lv_color_hex(UIColors::PRIMARY)
@@ -10,15 +11,22 @@
 #define UI_COLOR_DARK      lv_color_hex(UIColors::DARK)
 #define UI_COLOR_CARD      lv_color_hex(UIColors::CARD)
 #define UI_COLOR_TEXT      lv_color_hex(UIColors::TEXT)
+
 #define UI_COLOR_MUTED     lv_color_hex(UIColors::MUTED)
+
+
 
 LVGLUIManager::LVGLUIManager() {
     main_screen = nullptr;
     startup_screen = nullptr;
+    clock_screen = nullptr;
     ui_initialized = false;
+    lastDataReceived = 0;
+    isClockMode = false;
 }
 
 void LVGLUIManager::init() {
+    // (LVGL theme disabling removed for compatibility)
     // Initialize styles
     lv_style_init(&style_card);
     lv_style_set_radius(&style_card, 12);
@@ -61,6 +69,8 @@ void LVGLUIManager::createMainScreen() {
     createLandscapeUI();
     
     ui_initialized = true;
+    
+    // Don't show clock automatically - let main loop handle it
 }
 
 void LVGLUIManager::createLandscapeUI() {
@@ -142,8 +152,12 @@ void LVGLUIManager::createCPUHistoryChart() {
     lv_chart_set_update_mode(cpu_history_chart, LV_CHART_UPDATE_MODE_SHIFT); // Enable scrolling
     lv_obj_add_style(cpu_history_chart, &style_chart, 0);
     
-    // Add series with smooth line style
+    // Add series with smooth line style (no point dots)
     cpu_history_series = lv_chart_add_series(cpu_history_chart, UI_COLOR_PRIMARY, LV_CHART_AXIS_PRIMARY_Y);
+    
+    // Remove point dots by setting size to 0
+    lv_obj_set_style_size(cpu_history_chart, 0, LV_PART_INDICATOR);
+    lv_obj_set_style_line_width(cpu_history_chart, 2, LV_PART_ITEMS);
     
     // Initialize chart with zeros for smooth start
     for(int i = 0; i < CPU_CHART_POINTS; i++) {
@@ -182,6 +196,10 @@ void LVGLUIManager::createNetworkChart() {
     lv_chart_set_range(network_chart, LV_CHART_AXIS_PRIMARY_Y, 0, 1024);
     lv_chart_set_point_count(network_chart, UILayout::NETWORK_CHART_POINTS);
     lv_obj_add_style(network_chart, &style_chart, 0);
+    
+    // Remove point dots by setting size to 0
+    lv_obj_set_style_size(network_chart, 0, LV_PART_INDICATOR);
+    lv_obj_set_style_line_width(network_chart, 2, LV_PART_ITEMS);
     
     network_series = lv_chart_add_series(network_chart, UI_COLOR_INFO, LV_CHART_AXIS_PRIMARY_Y);
 }
@@ -275,6 +293,12 @@ lv_obj_t* LVGLUIManager::createCard(lv_obj_t* parent, lv_coord_t x, lv_coord_t y
 
 void LVGLUIManager::updateUI(SystemData& data) {
     if (!ui_initialized) return;
+    
+    // If we're in clock mode, don't update the main UI
+    if (isClockMode) {
+        updateClockScreen(nullptr); // Keep updating the clock
+        return;
+    }
     
     // Make sure we're on the main screen
     lv_scr_load(main_screen);
@@ -509,4 +533,188 @@ void LVGLUIManager::returnToMainUI() {
     createLandscapeUI();
     
     lv_scr_load(main_screen);
+}
+
+void LVGLUIManager::showClockScreen() {
+    if (isClockMode) return; // Already in clock mode
+    
+    isClockMode = true;
+    
+    // Create clock screen if it doesn't exist
+    if (!clock_screen) {
+        // Use the root screen as the parent
+        clock_screen = lv_obj_create(NULL);
+        // Remove all styles and set black background for all parts and states
+        lv_obj_remove_style_all(clock_screen);
+        lv_obj_set_size(clock_screen, 320, 240);
+        lv_obj_set_style_bg_color(clock_screen, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_style_bg_opa(clock_screen, LV_OPA_100, LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_style_bg_color(clock_screen, lv_color_hex(0x000000), LV_PART_ANY | LV_STATE_ANY);
+        lv_obj_set_style_bg_opa(clock_screen, LV_OPA_100, LV_PART_ANY | LV_STATE_ANY);
+        lv_obj_set_style_border_width(clock_screen, 0, LV_PART_ANY | LV_STATE_ANY);
+        lv_obj_set_style_outline_width(clock_screen, 0, LV_PART_ANY | LV_STATE_ANY);
+        lv_obj_set_style_pad_all(clock_screen, 0, LV_PART_ANY | LV_STATE_ANY);
+        // Load the screen immediately so it becomes the root
+        lv_scr_load(clock_screen);
+        
+        // MAIN DIGITAL TIME - Maximum size and impact
+        clock_time_label = lv_label_create(clock_screen);
+        lv_obj_set_size(clock_time_label, 320, 100); // Full width, large height
+        
+        // BRIGHT DIGITAL GREEN - Classic digital clock color
+        lv_obj_set_style_text_color(clock_time_label, lv_color_hex(0x00FF00), 0);
+        lv_obj_set_style_text_font(clock_time_label, &lv_font_montserrat_16, 0);
+        lv_obj_set_style_text_align(clock_time_label, LV_TEXT_ALIGN_CENTER, 0);
+        
+        // Clean digital appearance
+        lv_obj_set_style_bg_opa(clock_time_label, LV_OPA_0, 0);
+        lv_obj_set_style_border_width(clock_time_label, 0, 0);
+        lv_obj_set_style_pad_all(clock_time_label, 0, 0);
+        
+        // WIDE DIGITAL SPACING - Makes text appear much larger
+        lv_obj_set_style_text_letter_space(clock_time_label, 12, 0);
+        
+        // INTENSE GREEN GLOW - Digital display effect
+        lv_obj_set_style_shadow_width(clock_time_label, 30, 0);
+        lv_obj_set_style_shadow_color(clock_time_label, lv_color_hex(0x00FF00), 0);
+        lv_obj_set_style_shadow_opa(clock_time_label, LV_OPA_90, 0);
+        lv_obj_set_style_shadow_ofs_x(clock_time_label, 0, 0);
+        lv_obj_set_style_shadow_ofs_y(clock_time_label, 0, 0);
+        lv_obj_set_style_shadow_spread(clock_time_label, 5, 0);
+        
+        // Center the time display
+        lv_obj_align(clock_time_label, LV_ALIGN_CENTER, 0, -20);
+        
+        // AM/PM indicator - smaller but visible
+        clock_ampm_label = lv_label_create(clock_screen);
+        lv_obj_set_style_text_color(clock_ampm_label, lv_color_hex(0x00AA00), 0);
+        lv_obj_set_style_text_font(clock_ampm_label, &lv_font_montserrat_14, 0);
+        lv_obj_set_style_text_align(clock_ampm_label, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_set_style_text_letter_space(clock_ampm_label, 4, 0);
+        lv_obj_set_style_bg_opa(clock_ampm_label, LV_OPA_0, 0);
+        lv_obj_set_style_border_width(clock_ampm_label, 0, 0);
+        
+        // Subtle glow for AM/PM
+        lv_obj_set_style_shadow_width(clock_ampm_label, 15, 0);
+        lv_obj_set_style_shadow_color(clock_ampm_label, lv_color_hex(0x00AA00), 0);
+        lv_obj_set_style_shadow_opa(clock_ampm_label, LV_OPA_60, 0);
+        lv_obj_set_style_shadow_ofs_x(clock_ampm_label, 0, 0);
+        lv_obj_set_style_shadow_ofs_y(clock_ampm_label, 0, 0);
+        
+        lv_obj_align(clock_ampm_label, LV_ALIGN_CENTER, 140, -20); // Right of time
+        
+        // Date display - minimal digital style
+        clock_date_label = lv_label_create(clock_screen);
+        lv_obj_set_style_text_color(clock_date_label, lv_color_hex(0x004400), 0);
+        lv_obj_set_style_text_font(clock_date_label, &lv_font_montserrat_12, 0);
+        lv_obj_set_style_text_align(clock_date_label, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_set_style_text_letter_space(clock_date_label, 2, 0);
+        lv_obj_set_style_bg_opa(clock_date_label, LV_OPA_0, 0);
+        lv_obj_set_style_border_width(clock_date_label, 0, 0);
+        lv_obj_align(clock_date_label, LV_ALIGN_CENTER, 0, 60);
+        
+        // Status message - very dim
+        clock_status_label = lv_label_create(clock_screen);
+        lv_obj_set_style_text_color(clock_status_label, lv_color_hex(0x002200), 0);
+        lv_obj_set_style_text_font(clock_status_label, &lv_font_montserrat_12, 0);
+        lv_obj_set_style_text_align(clock_status_label, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_set_style_bg_opa(clock_status_label, LV_OPA_0, 0);
+        lv_obj_set_style_border_width(clock_status_label, 0, 0);
+        lv_label_set_text(clock_status_label, "WAITING FOR DATA");
+        lv_obj_align(clock_status_label, LV_ALIGN_BOTTOM_MID, 0, -5);
+    }
+    
+    // Update time immediately with NetworkManager
+    updateClockScreen(nullptr);
+    
+    // Load the clock screen
+    lv_scr_load(clock_screen);
+    
+    Serial.println("Digital clock activated - pure black background with green digits");
+}
+
+void LVGLUIManager::updateClockScreen(NetworkManager* networkManager) {
+    if (!isClockMode || !clock_time_label || !clock_date_label || !clock_ampm_label) return;
+    
+    if (networkManager && networkManager->isTimeSync()) {
+        // Use real 12-hour time from NTP with digital styling
+        String timeStr = networkManager->getCurrentTime12Hour();
+        String dateStr = networkManager->getCurrentDate();
+        String ampmStr = networkManager->getAMPM();
+        
+        // Format time for digital display (remove seconds for cleaner big digits)
+        int colonPos = timeStr.lastIndexOf(':');
+        if (colonPos > 0) {
+            timeStr = timeStr.substring(0, colonPos); // Remove seconds for bigger appearance
+        }
+        
+        lv_label_set_text(clock_time_label, timeStr.c_str());
+        lv_label_set_text(clock_date_label, dateStr.c_str());
+        lv_label_set_text(clock_ampm_label, ampmStr.c_str());
+    } else {
+        // Fallback to millis-based 12-hour time with digital styling
+        unsigned long currentTime = millis();
+        unsigned long totalSeconds = (currentTime / 1000) % 86400;
+        unsigned long hours24 = (totalSeconds / 3600) % 24;
+        unsigned long minutes = (totalSeconds / 60) % 60;
+        
+        // Convert to 12-hour format (no seconds for bigger digits)
+        unsigned long hours12 = hours24 == 0 ? 12 : (hours24 > 12 ? hours24 - 12 : hours24);
+        String ampm = hours24 < 12 ? "AM" : "PM";
+        
+        // Digital clock format - BIG DIGITS only
+        char timeStr[10];
+        snprintf(timeStr, sizeof(timeStr), "%lu:%02lu", hours12, minutes);
+        lv_label_set_text(clock_time_label, timeStr);
+        lv_label_set_text(clock_ampm_label, ampm.c_str());
+        
+        char dateStr[32];
+        if (networkManager && !networkManager->isTimeSync()) {
+            snprintf(dateStr, sizeof(dateStr), "SYNC...");
+        } else {
+            unsigned long days = currentTime / 86400000;
+            snprintf(dateStr, sizeof(dateStr), "DAY %lu", days + 1);
+        }
+        lv_label_set_text(clock_date_label, dateStr);
+    }
+    
+    // Update status with digital styling
+    if (lastDataReceived > 0) {
+        unsigned long currentTime = millis();
+        unsigned long timeSinceData = (currentTime - lastDataReceived) / 1000;
+        char statusStr[64];
+        snprintf(statusStr, sizeof(statusStr), "NO DATA • %lu SEC", timeSinceData);
+        lv_label_set_text(clock_status_label, statusStr);
+    } else {
+        lv_label_set_text(clock_status_label, "WAITING FOR DATA");
+    }
+}
+
+bool LVGLUIManager::hasRecentData() {
+    if (lastDataReceived == 0) return false;
+    
+    unsigned long currentTime = millis();
+    unsigned long timeSinceData = currentTime - lastDataReceived;
+
+    // Consider data "recent" if received within last 10 seconds
+    return timeSinceData < 10000;
+}
+
+void LVGLUIManager::setDataReceived() {
+    lastDataReceived = millis();
+    
+    // If we were in clock mode, return to main UI
+    if (isClockMode) {
+        isClockMode = false;
+        lv_scr_load(main_screen);
+        Serial.println("Returning to main UI - UDP data received");
+    }
+}
+
+void LVGLUIManager::checkDataTimeout() {
+    // Only check timeout if we're not already in clock mode and we have received data before
+    if (!isClockMode && lastDataReceived > 0 && !hasRecentData()) {
+        Serial.println("Data timeout detected - switching to clock screen");
+        showClockScreen();
+    }
 }
