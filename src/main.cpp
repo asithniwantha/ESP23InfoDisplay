@@ -11,16 +11,18 @@
 #include "NetworkManager.h"
 #include "SystemData.h"
 #include "TouchManager.h"
+#include "UIConfig.h"
 
-// Configuration
-const char* ssid = "linksys";
-const char* password = "asith1234567890";
-const char* mdnsHostname = "esp32display";
-const int udpPort = 8080;
+// Configuration - TODO: Move to config file or environment variables
+namespace Config {
+    constexpr const char* WIFI_SSID = "linksys";
+    constexpr const char* WIFI_PASSWORD = "asith1234567890";
+}
 
 // Component instances
 DisplayManager displayManager;
-NetworkManager networkManager(ssid, password, mdnsHostname, udpPort);
+NetworkManager networkManager(Config::WIFI_SSID, Config::WIFI_PASSWORD, 
+                            NetworkConfig::MDNS_HOSTNAME, NetworkConfig::UDP_PORT);
 SystemData systemData;
 TouchManager touchManager(XPT2046_CS, XPT2046_IRQ);
 
@@ -34,7 +36,9 @@ void setup() {
 
     // Initialize network
     networkManager.begin();
-    displayManager.displayWiFiInfo(networkManager.getLocalIP(), mdnsHostname, udpPort);
+    displayManager.displayWiFiInfo(networkManager.getLocalIP(), 
+                                   NetworkConfig::MDNS_HOSTNAME, 
+                                   NetworkConfig::UDP_PORT);
 
     // Initialize touchscreen
     touchManager.begin();

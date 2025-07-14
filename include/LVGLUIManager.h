@@ -3,6 +3,7 @@
 
 #include <lvgl.h>
 #include "SystemData.h"
+#include "UIConfig.h"
 
 class LVGLUIManager {
 public:
@@ -64,10 +65,13 @@ private:
     void createInfoCards();
     void createCharts();
     lv_obj_t* createCard(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_coord_t h, const char* title);
+    lv_obj_t* createStandardChart(lv_coord_t y_pos, lv_color_t color);
+    lv_obj_t* createChartIcon(lv_coord_t x, lv_coord_t y, const char* symbol, lv_color_t color);
     void updateCard(lv_obj_t* card, lv_obj_t* label, const char* value, lv_color_t color);
     void updateProgressBar(lv_obj_t* bar, int32_t value, lv_color_t color);
     void updateChart(lv_chart_series_t* series, int32_t value);
     void updateAllCharts(int32_t cpu_val, int32_t ram_val, int32_t temp_val);
+    lv_color_t getColorForValue(float value, int warning_threshold, int danger_threshold);
     
     // Style objects
     lv_style_t style_card;
@@ -78,11 +82,10 @@ private:
     bool ui_initialized = false;
     SystemStats lastStats;
     unsigned long lastForceUpdate = 0;
-    static const unsigned long FORCE_UPDATE_INTERVAL = 5000; // Force update every 5 seconds
     
     // Full screen chart state
     bool isFullScreenMode = false;
-    int currentFullScreenChart = -1; // -1: none, 0: CPU, 1: RAM, 2: TEMP
+    int currentFullScreenChart = -1; // -1: none, others use ChartType enum
     lv_obj_t* fullscreen_chart;
     lv_chart_series_t* fullscreen_series;
 };

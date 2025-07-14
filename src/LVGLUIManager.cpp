@@ -1,15 +1,16 @@
 #include "LVGLUIManager.h"
+#include "UIConfig.h"
 
-// Modern color palette
-#define UI_COLOR_PRIMARY   lv_color_hex(0x2196F3)  // Blue
-#define UI_COLOR_SUCCESS   lv_color_hex(0x4CAF50)  // Green
-#define UI_COLOR_WARNING   lv_color_hex(0xFF9800)  // Orange
-#define UI_COLOR_DANGER    lv_color_hex(0xF44336)  // Red
-#define UI_COLOR_INFO      lv_color_hex(0x00BCD4)  // Cyan
-#define UI_COLOR_DARK      lv_color_hex(0x1A1A1A)  // Dark background
-#define UI_COLOR_CARD      lv_color_hex(0x2D2D2D)  // Card background
-#define UI_COLOR_TEXT      lv_color_hex(0xFFFFFF)  // White text
-#define UI_COLOR_MUTED     lv_color_hex(0x888888)  // Gray text
+// Modern color palette using UIConfig constants
+#define UI_COLOR_PRIMARY   lv_color_hex(UIColors::PRIMARY)
+#define UI_COLOR_SUCCESS   lv_color_hex(UIColors::SUCCESS)
+#define UI_COLOR_WARNING   lv_color_hex(UIColors::WARNING)
+#define UI_COLOR_DANGER    lv_color_hex(UIColors::DANGER)
+#define UI_COLOR_INFO      lv_color_hex(UIColors::INFO)
+#define UI_COLOR_DARK      lv_color_hex(UIColors::DARK)
+#define UI_COLOR_CARD      lv_color_hex(UIColors::CARD)
+#define UI_COLOR_TEXT      lv_color_hex(UIColors::TEXT)
+#define UI_COLOR_MUTED     lv_color_hex(UIColors::MUTED)
 
 LVGLUIManager::LVGLUIManager() {
     main_screen = nullptr;
@@ -66,8 +67,10 @@ void LVGLUIManager::createMainScreen() {
 }
 
 void LVGLUIManager::createStatusBar() {
+    using namespace UILayout;
+    
     status_bar = lv_obj_create(main_screen);
-    lv_obj_set_size(status_bar, SCREEN_WIDTH, 20);
+    lv_obj_set_size(status_bar, SCREEN_WIDTH, STATUS_BAR_HEIGHT);
     lv_obj_set_pos(status_bar, 0, 0);
     lv_obj_set_style_bg_color(status_bar, UI_COLOR_PRIMARY, 0);
     lv_obj_set_style_radius(status_bar, 0, 0);
@@ -81,93 +84,70 @@ void LVGLUIManager::createStatusBar() {
 }
 
 void LVGLUIManager::createSystemCards() {
-    const int card_width = 75;
-    const int card_height = 35;
-    const int card_spacing = 5;
-    const int start_x = 5;
-    const int start_y = 25;
+    using namespace UILayout;
     
-    // CPU Card
-    cpu_card = createCard(main_screen, start_x, start_y, card_width, card_height, "CPU");
-    cpu_label = lv_label_create(cpu_card);
-    lv_label_set_text(cpu_label, "0.0%");
-    lv_obj_set_style_text_color(cpu_label, UI_COLOR_TEXT, 0);
-    lv_obj_align(cpu_label, LV_ALIGN_CENTER, 0, 8);
+    struct CardConfig {
+        lv_obj_t** card;
+        lv_obj_t** label;
+        const char* title;
+        const char* initial_text;
+        int x_offset;
+    };
     
-    // RAM Card
-    ram_card = createCard(main_screen, start_x + (card_width + card_spacing), start_y, card_width, card_height, "RAM");
-    ram_label = lv_label_create(ram_card);
-    lv_label_set_text(ram_label, "0.0%");
-    lv_obj_set_style_text_color(ram_label, UI_COLOR_TEXT, 0);
-    lv_obj_align(ram_label, LV_ALIGN_CENTER, 0, 8);
+    CardConfig cards[] = {
+        {&cpu_card, &cpu_label, "CPU", "0.0%", 0},
+        {&ram_card, &ram_label, "RAM", "0.0%", 1},
+        {&disk_card, &disk_label, "DISK", "0.0%", 2},
+        {&temp_card, &temp_label, "TEMP", "0°C", 3}
+    };
     
-    // DISK Card
-    disk_card = createCard(main_screen, start_x + 2 * (card_width + card_spacing), start_y, card_width, card_height, "DISK");
-    disk_label = lv_label_create(disk_card);
-    lv_label_set_text(disk_label, "0.0%");
-    lv_obj_set_style_text_color(disk_label, UI_COLOR_TEXT, 0);
-    lv_obj_align(disk_label, LV_ALIGN_CENTER, 0, 8);
-    
-    // TEMP Card
-    temp_card = createCard(main_screen, start_x + 3 * (card_width + card_spacing), start_y, card_width, card_height, "TEMP");
-    temp_label = lv_label_create(temp_card);
-    lv_label_set_text(temp_label, "0°C");
-    lv_obj_set_style_text_color(temp_label, UI_COLOR_TEXT, 0);
-    lv_obj_align(temp_label, LV_ALIGN_CENTER, 0, 8);
+    for (auto& config : cards) {
+        int x_pos = CARD_START_X + config.x_offset * (CARD_WIDTH + CARD_SPACING);
+        *config.card = createCard(main_screen, x_pos, CARD_START_Y, CARD_WIDTH, CARD_HEIGHT, config.title);
+        *config.label = lv_label_create(*config.card);
+        lv_label_set_text(*config.label, config.initial_text);
+        lv_obj_set_style_text_color(*config.label, UI_COLOR_TEXT, 0);
+        lv_obj_align(*config.label, LV_ALIGN_CENTER, 0, 8);
+    }
 }
 
 void LVGLUIManager::createProgressBars() {
-    const int bar_width = 75;
-    const int bar_height = 8;
-    const int bar_spacing = 5;
-    const int start_x = 5;
-    const int start_y = 65;
+    using namespace UILayout;
     
-    // CPU Progress Bar
-    cpu_bar = lv_bar_create(main_screen);
-    lv_obj_set_size(cpu_bar, bar_width, bar_height);
-    lv_obj_set_pos(cpu_bar, start_x, start_y);
-    lv_obj_add_style(cpu_bar, &style_progress, 0);
-    lv_bar_set_value(cpu_bar, 0, LV_ANIM_OFF);
+    struct BarConfig {
+        lv_obj_t** bar;
+        int x_offset;
+    };
     
-    // RAM Progress Bar
-    ram_bar = lv_bar_create(main_screen);
-    lv_obj_set_size(ram_bar, bar_width, bar_height);
-    lv_obj_set_pos(ram_bar, start_x + (bar_width + bar_spacing), start_y);
-    lv_obj_add_style(ram_bar, &style_progress, 0);
-    lv_bar_set_value(ram_bar, 0, LV_ANIM_OFF);
+    BarConfig bars[] = {
+        {&cpu_bar, 0},
+        {&ram_bar, 1},
+        {&disk_bar, 2},
+        {&temp_bar, 3}
+    };
     
-    // DISK Progress Bar
-    disk_bar = lv_bar_create(main_screen);
-    lv_obj_set_size(disk_bar, bar_width, bar_height);
-    lv_obj_set_pos(disk_bar, start_x + 2 * (bar_width + bar_spacing), start_y);
-    lv_obj_add_style(disk_bar, &style_progress, 0);
-    lv_bar_set_value(disk_bar, 0, LV_ANIM_OFF);
-    
-    // TEMP Progress Bar
-    temp_bar = lv_bar_create(main_screen);
-    lv_obj_set_size(temp_bar, bar_width, bar_height);
-    lv_obj_set_pos(temp_bar, start_x + 3 * (bar_width + bar_spacing), start_y);
-    lv_obj_add_style(temp_bar, &style_progress, 0);
-    lv_bar_set_value(temp_bar, 0, LV_ANIM_OFF);
+    for (auto& config : bars) {
+        int x_pos = CARD_START_X + config.x_offset * (PROGRESS_BAR_WIDTH + CARD_SPACING);
+        *config.bar = lv_bar_create(main_screen);
+        lv_obj_set_size(*config.bar, PROGRESS_BAR_WIDTH, PROGRESS_BAR_HEIGHT);
+        lv_obj_set_pos(*config.bar, x_pos, PROGRESS_BAR_Y);
+        lv_obj_add_style(*config.bar, &style_progress, 0);
+        lv_bar_set_value(*config.bar, 0, LV_ANIM_OFF);
+    }
 }
 
 void LVGLUIManager::createInfoCards() {
-    const int card_width = 120;
-    const int card_height = 30;
-    const int card_spacing = 8;
-    const int start_x = 5;
-    const int start_y = 85;
+    using namespace UILayout;
     
     // Network Card
-    network_card = createCard(main_screen, start_x, start_y, card_width, card_height, "Net");
+    network_card = createCard(main_screen, CARD_START_X, INFO_CARD_Y, INFO_CARD_WIDTH, INFO_CARD_HEIGHT, "Net");
     network_label = lv_label_create(network_card);
     lv_label_set_text(network_label, "0KB/s");
     lv_obj_set_style_text_color(network_label, UI_COLOR_TEXT, 0);
     lv_obj_align(network_label, LV_ALIGN_CENTER, 0, 6);
     
     // Volume Card
-    volume_card = createCard(main_screen, start_x + (card_width + card_spacing), start_y, card_width, card_height, "Vol");
+    volume_card = createCard(main_screen, CARD_START_X + (INFO_CARD_WIDTH + INFO_CARD_SPACING), INFO_CARD_Y, INFO_CARD_WIDTH, INFO_CARD_HEIGHT, "Vol");
     volume_label = lv_label_create(volume_card);
     lv_label_set_text(volume_label, "0%");
     lv_obj_set_style_text_color(volume_label, UI_COLOR_TEXT, 0);
@@ -177,76 +157,60 @@ void LVGLUIManager::createInfoCards() {
     time_label = lv_label_create(main_screen);
     lv_label_set_text(time_label, "Waiting for data...");
     lv_obj_set_style_text_color(time_label, UI_COLOR_MUTED, 0);
-    lv_obj_set_pos(time_label, start_x + 250, start_y + 8);
+    lv_obj_set_pos(time_label, CARD_START_X + 250, INFO_CARD_Y + 8);
 }
 
 void LVGLUIManager::createCharts() {
-    const int chart_width = 255;  // Reduced width to make room for icons
-    const int chart_height = 25;
-    const int chart_spacing = 32;
-    const int start_x = 5;
-    const int start_y = 125;
-    const int icon_x = start_x + chart_width + 8;  // Icon position
+    using namespace UILayout;
+    
+    const int icon_x = CARD_START_X + CHART_WIDTH + CHART_ICON_OFFSET;
     
     // CPU Chart
-    cpu_chart = lv_chart_create(main_screen);
-    lv_obj_set_size(cpu_chart, chart_width, chart_height);
-    lv_obj_set_pos(cpu_chart, start_x, start_y);
-    lv_obj_add_style(cpu_chart, &style_chart, 0);
-    lv_chart_set_type(cpu_chart, LV_CHART_TYPE_LINE);
-    lv_chart_set_point_count(cpu_chart, 50);
-    lv_chart_set_range(cpu_chart, LV_CHART_AXIS_PRIMARY_Y, 0, 100);
-    lv_chart_set_update_mode(cpu_chart, LV_CHART_UPDATE_MODE_SHIFT);
+    cpu_chart = createStandardChart(CHART_START_Y, UI_COLOR_SUCCESS);
     cpu_series = lv_chart_add_series(cpu_chart, UI_COLOR_SUCCESS, LV_CHART_AXIS_PRIMARY_Y);
-    lv_obj_set_style_line_width(cpu_chart, 2, LV_PART_ITEMS);
-    lv_obj_set_style_size(cpu_chart, 3, LV_PART_INDICATOR);
-    
-    // CPU Icon
-    lv_obj_t* cpu_icon = lv_label_create(main_screen);
-    lv_label_set_text(cpu_icon, LV_SYMBOL_SETTINGS);
-    lv_obj_set_style_text_color(cpu_icon, UI_COLOR_SUCCESS, 0);
-    lv_obj_set_style_text_font(cpu_icon, &lv_font_montserrat_16, 0);
-    lv_obj_set_pos(cpu_icon, icon_x, start_y + 4);
+    createChartIcon(icon_x, CHART_START_Y + 4, LV_SYMBOL_SETTINGS, UI_COLOR_SUCCESS);
     
     // RAM Chart
-    ram_chart = lv_chart_create(main_screen);
-    lv_obj_set_size(ram_chart, chart_width, chart_height);
-    lv_obj_set_pos(ram_chart, start_x, start_y + chart_spacing);
-    lv_obj_add_style(ram_chart, &style_chart, 0);
-    lv_chart_set_type(ram_chart, LV_CHART_TYPE_LINE);
-    lv_chart_set_point_count(ram_chart, 50);
-    lv_chart_set_range(ram_chart, LV_CHART_AXIS_PRIMARY_Y, 0, 100);
-    lv_chart_set_update_mode(ram_chart, LV_CHART_UPDATE_MODE_SHIFT);
+    ram_chart = createStandardChart(CHART_START_Y + CHART_SPACING, UI_COLOR_SUCCESS);
     ram_series = lv_chart_add_series(ram_chart, UI_COLOR_SUCCESS, LV_CHART_AXIS_PRIMARY_Y);
-    lv_obj_set_style_line_width(ram_chart, 2, LV_PART_ITEMS);
-    lv_obj_set_style_size(ram_chart, 3, LV_PART_INDICATOR);
-    
-    // RAM Icon
-    lv_obj_t* ram_icon = lv_label_create(main_screen);
-    lv_label_set_text(ram_icon, LV_SYMBOL_LIST);
-    lv_obj_set_style_text_color(ram_icon, UI_COLOR_SUCCESS, 0);
-    lv_obj_set_style_text_font(ram_icon, &lv_font_montserrat_16, 0);
-    lv_obj_set_pos(ram_icon, icon_x, start_y + chart_spacing + 4);
+    createChartIcon(icon_x, CHART_START_Y + CHART_SPACING + 4, LV_SYMBOL_LIST, UI_COLOR_SUCCESS);
     
     // Temperature Chart
-    temp_chart = lv_chart_create(main_screen);
-    lv_obj_set_size(temp_chart, chart_width, chart_height);
-    lv_obj_set_pos(temp_chart, start_x, start_y + 2 * chart_spacing);
-    lv_obj_add_style(temp_chart, &style_chart, 0);
-    lv_chart_set_type(temp_chart, LV_CHART_TYPE_LINE);
-    lv_chart_set_point_count(temp_chart, 50);
-    lv_chart_set_range(temp_chart, LV_CHART_AXIS_PRIMARY_Y, 0, 100);
-    lv_chart_set_update_mode(temp_chart, LV_CHART_UPDATE_MODE_SHIFT);
+    temp_chart = createStandardChart(CHART_START_Y + 2 * CHART_SPACING, UI_COLOR_DANGER);
     temp_series = lv_chart_add_series(temp_chart, UI_COLOR_DANGER, LV_CHART_AXIS_PRIMARY_Y);
-    lv_obj_set_style_line_width(temp_chart, 2, LV_PART_ITEMS);
-    lv_obj_set_style_size(temp_chart, 3, LV_PART_INDICATOR);
+    createChartIcon(icon_x, CHART_START_Y + 2 * CHART_SPACING + 4, LV_SYMBOL_WARNING, UI_COLOR_DANGER);
+}
+
+lv_obj_t* LVGLUIManager::createStandardChart(lv_coord_t y_pos, lv_color_t color) {
+    using namespace UILayout;
     
-    // Temperature Icon
-    lv_obj_t* temp_icon = lv_label_create(main_screen);
-    lv_label_set_text(temp_icon, LV_SYMBOL_WARNING);
-    lv_obj_set_style_text_color(temp_icon, UI_COLOR_DANGER, 0);
-    lv_obj_set_style_text_font(temp_icon, &lv_font_montserrat_16, 0);
-    lv_obj_set_pos(temp_icon, icon_x, start_y + 2 * chart_spacing + 4);
+    lv_obj_t* chart = lv_chart_create(main_screen);
+    lv_obj_set_size(chart, CHART_WIDTH, CHART_HEIGHT);
+    lv_obj_set_pos(chart, CARD_START_X, y_pos);
+    lv_obj_add_style(chart, &style_chart, 0);
+    lv_chart_set_type(chart, LV_CHART_TYPE_LINE);
+    lv_chart_set_point_count(chart, CHART_POINT_COUNT);
+    lv_chart_set_range(chart, LV_CHART_AXIS_PRIMARY_Y, 0, 100);
+    lv_chart_set_update_mode(chart, LV_CHART_UPDATE_MODE_SHIFT);
+    lv_obj_set_style_line_width(chart, 2, LV_PART_ITEMS);
+    lv_obj_set_style_size(chart, 3, LV_PART_INDICATOR);
+    
+    return chart;
+}
+
+lv_obj_t* LVGLUIManager::createChartIcon(lv_coord_t x, lv_coord_t y, const char* symbol, lv_color_t color) {
+    lv_obj_t* icon = lv_label_create(main_screen);
+    lv_label_set_text(icon, symbol);
+    lv_obj_set_style_text_color(icon, color, 0);
+    lv_obj_set_style_text_font(icon, &lv_font_montserrat_16, 0);
+    lv_obj_set_pos(icon, x, y);
+    return icon;
+}
+
+lv_color_t LVGLUIManager::getColorForValue(float value, int warning_threshold, int danger_threshold) {
+    if (value > danger_threshold) return UI_COLOR_DANGER;
+    if (value > warning_threshold) return UI_COLOR_WARNING;
+    return UI_COLOR_SUCCESS;
 }
 
 lv_obj_t* LVGLUIManager::createCard(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_coord_t h, const char* title) {
@@ -317,9 +281,9 @@ void LVGLUIManager::updateUI(SystemData& data) {
     
     SystemStats& stats = data.getCurrentData();
     
-    // Check if we need a force update (every 5 seconds)
+    // Check if we need a force update
     unsigned long currentTime = millis();
-    bool forceUpdate = (currentTime - lastForceUpdate) >= FORCE_UPDATE_INTERVAL;
+    bool forceUpdate = (currentTime - lastForceUpdate) >= SystemThresholds::FORCE_UPDATE_INTERVAL;
     if (forceUpdate) {
         lastForceUpdate = currentTime;
     }
@@ -331,33 +295,30 @@ void LVGLUIManager::updateUI(SystemData& data) {
     int32_t temp_chart_val = stats.cpuTemp;
     
     // Update CPU
-    if (abs(stats.cpuUsage - lastStats.cpuUsage) > 0.5 || forceUpdate) {
+    if (abs(stats.cpuUsage - lastStats.cpuUsage) > SystemThresholds::CPU_UPDATE_THRESHOLD || forceUpdate) {
         char cpu_text[10];
         snprintf(cpu_text, sizeof(cpu_text), "%.1f%%", stats.cpuUsage);
-        lv_color_t cpu_color = stats.cpuUsage > 80 ? UI_COLOR_DANGER : 
-                              stats.cpuUsage > 60 ? UI_COLOR_WARNING : UI_COLOR_SUCCESS;
+        lv_color_t cpu_color = getColorForValue(stats.cpuUsage, SystemThresholds::WARNING_LEVEL, SystemThresholds::DANGER_LEVEL);
         updateCard(cpu_card, cpu_label, cpu_text, cpu_color);
         updateProgressBar(cpu_bar, (int32_t)stats.cpuUsage, cpu_color);
         charts_updated = true;
     }
     
     // Update RAM
-    if (abs(stats.ramUsage - lastStats.ramUsage) > 0.5 || forceUpdate) {
+    if (abs(stats.ramUsage - lastStats.ramUsage) > SystemThresholds::RAM_UPDATE_THRESHOLD || forceUpdate) {
         char ram_text[10];
         snprintf(ram_text, sizeof(ram_text), "%.1f%%", stats.ramUsage);
-        lv_color_t ram_color = stats.ramUsage > 80 ? UI_COLOR_DANGER : 
-                              stats.ramUsage > 60 ? UI_COLOR_WARNING : UI_COLOR_SUCCESS;
+        lv_color_t ram_color = getColorForValue(stats.ramUsage, SystemThresholds::WARNING_LEVEL, SystemThresholds::DANGER_LEVEL);
         updateCard(ram_card, ram_label, ram_text, ram_color);
         updateProgressBar(ram_bar, (int32_t)stats.ramUsage, ram_color);
         charts_updated = true;
     }
     
-    // Update DISK - reduce threshold for more frequent updates
-    if (abs(stats.diskUsage - lastStats.diskUsage) > 0.1 || lastStats.diskUsage == 0 || forceUpdate) {
+    // Update DISK
+    if (abs(stats.diskUsage - lastStats.diskUsage) > SystemThresholds::DISK_UPDATE_THRESHOLD || lastStats.diskUsage == 0 || forceUpdate) {
         char disk_text[10];
         snprintf(disk_text, sizeof(disk_text), "%.1f%%", stats.diskUsage);
-        lv_color_t disk_color = stats.diskUsage > 80 ? UI_COLOR_DANGER : 
-                               stats.diskUsage > 60 ? UI_COLOR_WARNING : UI_COLOR_SUCCESS;
+        lv_color_t disk_color = getColorForValue(stats.diskUsage, SystemThresholds::WARNING_LEVEL, SystemThresholds::DANGER_LEVEL);
         updateCard(disk_card, disk_label, disk_text, disk_color);
         updateProgressBar(disk_bar, (int32_t)stats.diskUsage, disk_color);
     }
@@ -366,8 +327,7 @@ void LVGLUIManager::updateUI(SystemData& data) {
     if (stats.cpuTemp != lastStats.cpuTemp || forceUpdate) {
         char temp_text[10];
         snprintf(temp_text, sizeof(temp_text), "%d°C", stats.cpuTemp);
-        lv_color_t temp_color = stats.cpuTemp > 70 ? UI_COLOR_DANGER : 
-                               stats.cpuTemp > 50 ? UI_COLOR_WARNING : UI_COLOR_INFO;
+        lv_color_t temp_color = getColorForValue(stats.cpuTemp, SystemThresholds::TEMP_WARNING_LEVEL, SystemThresholds::TEMP_DANGER_LEVEL);
         updateCard(temp_card, temp_label, temp_text, temp_color);
         updateProgressBar(temp_bar, stats.cpuTemp, temp_color);
         charts_updated = true;
@@ -378,8 +338,8 @@ void LVGLUIManager::updateUI(SystemData& data) {
         updateAllCharts(cpu_chart_val, ram_chart_val, temp_chart_val);
     }
     
-    // Update Network - reduce threshold and add force update condition
-    if (abs(stats.networkSpeed - lastStats.networkSpeed) > 0.01 || 
+    // Update Network
+    if (abs(stats.networkSpeed - lastStats.networkSpeed) > SystemThresholds::NETWORK_UPDATE_THRESHOLD || 
         lastStats.networkSpeed == 0 || 
         stats.networkSpeed == 0 || 
         forceUpdate) {
@@ -474,40 +434,36 @@ void LVGLUIManager::showTouchDebug(int x, int y, int z) {
 void LVGLUIManager::handleTouch(int x, int y) {
     if (!ui_initialized) return;
     
+    using namespace TouchZones;
+    using namespace UILayout;
+    
     // If in full screen mode, return to main UI
     if (isFullScreenMode) {
         returnToMainUI();
         return;
     }
     
-    // Chart touch detection (charts start at y=125, height=25, spacing=32)
-    if (x >= 5 && x <= 260 && y >= 125) { // Within chart area
-        if (y >= 125 && y <= 150) {
-            // CPU chart touched
-            showFullScreenChart(0);
-        } else if (y >= 157 && y <= 182) {
-            // RAM chart touched  
-            showFullScreenChart(1);
-        } else if (y >= 189 && y <= 214) {
-            // Temperature chart touched
-            showFullScreenChart(2);
+    // Chart touch detection
+    if (x >= CARD_START_X && x <= (CARD_START_X + CHART_WIDTH)) {
+        if (y >= CPU_CHART_Y_MIN && y <= CPU_CHART_Y_MAX) {
+            showFullScreenChart(static_cast<int>(ChartType::CPU));
+        } else if (y >= RAM_CHART_Y_MIN && y <= RAM_CHART_Y_MAX) {
+            showFullScreenChart(static_cast<int>(ChartType::RAM));
+        } else if (y >= TEMP_CHART_Y_MIN && y <= TEMP_CHART_Y_MAX) {
+            showFullScreenChart(static_cast<int>(ChartType::TEMPERATURE));
         }
     }
     
     // Card touch detection
-    else if (y >= 25 && y <= 60) { // Main cards area
-        if (x >= 5 && x <= 80) {
-            // CPU card touched
-            showFullScreenChart(0);
-        } else if (x >= 85 && x <= 160) {
-            // RAM card touched
-            showFullScreenChart(1);
-        } else if (x >= 165 && x <= 240) {
-            // DISK card touched - show disk info
-            showFullScreenChart(3);
-        } else if (x >= 245 && x <= 320) {
-            // TEMP card touched
-            showFullScreenChart(2);
+    else if (y >= CARD_START_Y && y <= CARD_END_Y) {
+        if (x >= CPU_CARD_X_MIN && x <= CPU_CARD_X_MAX) {
+            showFullScreenChart(static_cast<int>(ChartType::CPU));
+        } else if (x >= RAM_CARD_X_MIN && x <= RAM_CARD_X_MAX) {
+            showFullScreenChart(static_cast<int>(ChartType::RAM));
+        } else if (x >= DISK_CARD_X_MIN && x <= DISK_CARD_X_MAX) {
+            showFullScreenChart(static_cast<int>(ChartType::DISK));
+        } else if (x >= TEMP_CARD_X_MIN && x <= TEMP_CARD_X_MAX) {
+            showFullScreenChart(static_cast<int>(ChartType::TEMPERATURE));
         }
     }
 }
