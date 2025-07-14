@@ -1,4 +1,5 @@
 #include "DisplayManager.h"
+#include "UIConfig.h"
 
 DisplayManager::DisplayManager() {
     uiInitialized = false;
@@ -49,4 +50,26 @@ void DisplayManager::displayModernUI(SystemData& data) {
     }
     
     uiManager.updateUI(data);
+}
+
+void DisplayManager::handleVolumeTouch(int x, int y, SystemData& data) {
+    // Calculate volume based on touch position within volume control area
+    int sliderX = UILayout::VOLUME_CONTROL_X + 25; // Account for speaker icon
+    int sliderW = UILayout::BOTTOM_CARD_WIDTH - 35; // Slider width
+    
+    if (x >= sliderX && x <= sliderX + sliderW) {
+        float newVolume = ((x - sliderX) * 100.0f) / sliderW;
+        newVolume = constrain(newVolume, 0, 100);
+        
+        data.setVolume((int)newVolume);
+        onVolumeChanged((int)newVolume);
+        
+        Serial.printf("Volume changed to: %d%%\n", (int)newVolume);
+    }
+}
+
+void DisplayManager::onVolumeChanged(int newVolume) {
+    // This could send a UDP command to change system volume
+    // For now, just log the change
+    Serial.printf("Volume control: Setting volume to %d%%\n", newVolume);
 }

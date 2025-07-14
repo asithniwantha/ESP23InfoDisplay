@@ -37,6 +37,11 @@ public:
     
     // Helper method for formatting network speed
     String getFormattedNetworkSpeed();
+    
+    // Volume control methods
+    void setVolume(int volume);
+    int getVolume() const;
+    String getFormattedVolume() const;
 
 private:
     SystemStats currentData;

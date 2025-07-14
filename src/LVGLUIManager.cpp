@@ -57,160 +57,203 @@ void LVGLUIManager::createMainScreen() {
     main_screen = lv_obj_create(NULL);
     lv_obj_set_style_bg_color(main_screen, UI_COLOR_DARK, 0);
     
-    createStatusBar();
-    createSystemCards();
-    createProgressBars();
-    createInfoCards();
-    createCharts();
+    // Create landscape layout
+    createLandscapeUI();
     
     ui_initialized = true;
 }
 
-void LVGLUIManager::createStatusBar() {
-    using namespace UILayout;
-    
-    status_bar = lv_obj_create(main_screen);
-    lv_obj_set_size(status_bar, SCREEN_WIDTH, STATUS_BAR_HEIGHT);
-    lv_obj_set_pos(status_bar, 0, 0);
-    lv_obj_set_style_bg_color(status_bar, UI_COLOR_PRIMARY, 0);
-    lv_obj_set_style_radius(status_bar, 0, 0);
-    lv_obj_set_style_border_width(status_bar, 0, 0);
-    lv_obj_set_style_pad_all(status_bar, 0, 0);
-    
-    lv_obj_t* status_label = lv_label_create(status_bar);
-    lv_label_set_text(status_label, "ESP32 System Monitor");
-    lv_obj_set_style_text_color(status_label, UI_COLOR_TEXT, 0);
-    lv_obj_center(status_label);
+void LVGLUIManager::createLandscapeUI() {
+    createTopRowCards();
+    createCPUHistoryChart();
+    createNetworkChart();
+    createVolumeControl();
 }
 
-void LVGLUIManager::createSystemCards() {
+void LVGLUIManager::createTopRowCards() {
     using namespace UILayout;
     
-    struct CardConfig {
-        lv_obj_t** card;
-        lv_obj_t** label;
-        const char* title;
-        const char* initial_text;
-        int x_offset;
-    };
+    // Calculate exact positions for 4 cards to fit perfectly in 320px
+    // Total available width: 320 - (2 * PADDING) = 308px
+    // 4 cards + 3 gaps: 4 * CARD_WIDTH + 3 * GAP = 4*72 + 3*6 = 306px ✓
+    int card_positions[4];
+    for (int i = 0; i < 4; i++) {
+        card_positions[i] = PADDING + (i * (CARD_WIDTH + GAP));
+    }
     
-    CardConfig cards[] = {
-        {&cpu_card, &cpu_label, "CPU", "0.0%", 0},
-        {&ram_card, &ram_label, "RAM", "0.0%", 1},
-        {&disk_card, &disk_label, "DISK", "0.0%", 2},
-        {&temp_card, &temp_label, "TEMP", "0°C", 3}
-    };
+    // CPU Card (Position: 6px)
+    cpu_card = createCard(main_screen, card_positions[0], CARD_ROW_Y, CARD_WIDTH, CARD_HEIGHT, "CPU");
+    cpu_bar = lv_bar_create(cpu_card);
+    lv_obj_set_size(cpu_bar, CARD_WIDTH - 14, 8);
+    lv_obj_align(cpu_bar, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_add_style(cpu_bar, &style_progress, 0);
+    cpu_label = lv_label_create(cpu_card);
+    lv_label_set_text(cpu_label, "0%");
+    lv_obj_align(cpu_label, LV_ALIGN_BOTTOM_MID, 0, -4);
     
-    for (auto& config : cards) {
-        int x_pos = CARD_START_X + config.x_offset * (CARD_WIDTH + CARD_SPACING);
-        *config.card = createCard(main_screen, x_pos, CARD_START_Y, CARD_WIDTH, CARD_HEIGHT, config.title);
-        *config.label = lv_label_create(*config.card);
-        lv_label_set_text(*config.label, config.initial_text);
-        lv_obj_set_style_text_color(*config.label, UI_COLOR_TEXT, 0);
-        lv_obj_align(*config.label, LV_ALIGN_CENTER, 0, 8);
+    // RAM Card (Position: 84px)
+    ram_card = createCard(main_screen, card_positions[1], CARD_ROW_Y, CARD_WIDTH, CARD_HEIGHT, "RAM");
+    ram_bar = lv_bar_create(ram_card);
+    lv_obj_set_size(ram_bar, CARD_WIDTH - 14, 8);
+    lv_obj_align(ram_bar, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_add_style(ram_bar, &style_progress, 0);
+    ram_label = lv_label_create(ram_card);
+    lv_label_set_text(ram_label, "0%");
+    lv_obj_align(ram_label, LV_ALIGN_BOTTOM_MID, 0, -4);
+    
+    // Temperature Card (Position: 162px) - with gauge
+    temp_card = createCard(main_screen, card_positions[2], CARD_ROW_Y, CARD_WIDTH, CARD_HEIGHT, "TEMP");
+    createTemperatureGauge();
+    
+    // Disk Card (Position: 240px)
+    disk_card = createCard(main_screen, card_positions[3], CARD_ROW_Y, CARD_WIDTH, CARD_HEIGHT, "DISK");
+    disk_bar = lv_bar_create(disk_card);
+    lv_obj_set_size(disk_bar, CARD_WIDTH - 14, 8);
+    lv_obj_align(disk_bar, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_add_style(disk_bar, &style_progress, 0);
+    disk_label = lv_label_create(disk_card);
+    lv_label_set_text(disk_label, "0%");
+    lv_obj_align(disk_label, LV_ALIGN_BOTTOM_MID, 0, -4);
+}
+
+void LVGLUIManager::createCPUHistoryChart() {
+    using namespace UILayout;
+    
+    // Create container for CPU history chart - perfectly centered
+    lv_obj_t* chart_container = lv_obj_create(main_screen);
+    lv_obj_set_size(chart_container, CPU_CHART_WIDTH, CPU_CHART_HEIGHT + 18);
+    lv_obj_set_pos(chart_container, PADDING, CPU_CHART_Y);
+    lv_obj_add_style(chart_container, &style_card, 0);
+    
+    // Title
+    lv_obj_t* title = lv_label_create(chart_container);
+    lv_label_set_text(title, "CPU History");
+    lv_obj_set_style_text_color(title, UI_COLOR_TEXT, 0);
+    lv_obj_set_style_text_font(title, &lv_font_montserrat_12, 0);
+    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 3);
+    
+    // Chart with Task Manager style scrolling
+    cpu_history_chart = lv_chart_create(chart_container);
+    lv_obj_set_size(cpu_history_chart, CPU_CHART_WIDTH - 12, CPU_CHART_HEIGHT - 12);
+    lv_obj_align(cpu_history_chart, LV_ALIGN_BOTTOM_MID, 0, -3);
+    lv_chart_set_type(cpu_history_chart, LV_CHART_TYPE_LINE);
+    lv_chart_set_range(cpu_history_chart, LV_CHART_AXIS_PRIMARY_Y, 0, 100);
+    lv_chart_set_point_count(cpu_history_chart, CPU_CHART_POINTS);
+    lv_chart_set_update_mode(cpu_history_chart, LV_CHART_UPDATE_MODE_SHIFT); // Enable scrolling
+    lv_obj_add_style(cpu_history_chart, &style_chart, 0);
+    
+    // Add series with smooth line style
+    cpu_history_series = lv_chart_add_series(cpu_history_chart, UI_COLOR_PRIMARY, LV_CHART_AXIS_PRIMARY_Y);
+    
+    // Initialize chart with zeros for smooth start
+    for(int i = 0; i < CPU_CHART_POINTS; i++) {
+        lv_chart_set_next_value(cpu_history_chart, cpu_history_series, 0);
     }
 }
 
-void LVGLUIManager::createProgressBars() {
+void LVGLUIManager::createNetworkChart() {
     using namespace UILayout;
     
-    struct BarConfig {
-        lv_obj_t** bar;
-        int x_offset;
-    };
+    // Create container for network chart
+    lv_obj_t* chart_container = lv_obj_create(main_screen);
+    lv_obj_set_size(chart_container, BOTTOM_CARD_WIDTH, BOTTOM_CARD_HEIGHT);
+    lv_obj_set_pos(chart_container, NETWORK_CHART_X, NETWORK_CHART_Y);
+    lv_obj_add_style(chart_container, &style_card, 0);
     
-    BarConfig bars[] = {
-        {&cpu_bar, 0},
-        {&ram_bar, 1},
-        {&disk_bar, 2},
-        {&temp_bar, 3}
-    };
+    // Title
+    lv_obj_t* title = lv_label_create(chart_container);
+    lv_label_set_text(title, "Network");
+    lv_obj_set_style_text_color(title, UI_COLOR_TEXT, 0);
+    lv_obj_set_style_text_font(title, &lv_font_montserrat_12, 0);
+    lv_obj_align(title, LV_ALIGN_TOP_LEFT, 4, 2);
     
-    for (auto& config : bars) {
-        int x_pos = CARD_START_X + config.x_offset * (PROGRESS_BAR_WIDTH + CARD_SPACING);
-        *config.bar = lv_bar_create(main_screen);
-        lv_obj_set_size(*config.bar, PROGRESS_BAR_WIDTH, PROGRESS_BAR_HEIGHT);
-        lv_obj_set_pos(*config.bar, x_pos, PROGRESS_BAR_Y);
-        lv_obj_add_style(*config.bar, &style_progress, 0);
-        lv_bar_set_value(*config.bar, 0, LV_ANIM_OFF);
-    }
-}
-
-void LVGLUIManager::createInfoCards() {
-    using namespace UILayout;
-    
-    // Network Card
-    network_card = createCard(main_screen, CARD_START_X, INFO_CARD_Y, INFO_CARD_WIDTH, INFO_CARD_HEIGHT, "Net");
-    network_label = lv_label_create(network_card);
+    // Speed label
+    network_label = lv_label_create(chart_container);
     lv_label_set_text(network_label, "0KB/s");
-    lv_obj_set_style_text_color(network_label, UI_COLOR_TEXT, 0);
-    lv_obj_align(network_label, LV_ALIGN_CENTER, 0, 6);
+    lv_obj_set_style_text_color(network_label, UI_COLOR_INFO, 0);
+    lv_obj_set_style_text_font(network_label, &lv_font_montserrat_12, 0);
+    lv_obj_align(network_label, LV_ALIGN_TOP_RIGHT, -4, 2);
     
-    // Volume Card
-    volume_card = createCard(main_screen, CARD_START_X + (INFO_CARD_WIDTH + INFO_CARD_SPACING), INFO_CARD_Y, INFO_CARD_WIDTH, INFO_CARD_HEIGHT, "Vol");
+    // Chart
+    network_chart = lv_chart_create(chart_container);
+    lv_obj_set_size(network_chart, BOTTOM_CARD_WIDTH - 12, BOTTOM_CARD_HEIGHT - 20);
+    lv_obj_align(network_chart, LV_ALIGN_BOTTOM_MID, 0, -2);
+    lv_chart_set_type(network_chart, LV_CHART_TYPE_LINE);
+    lv_chart_set_range(network_chart, LV_CHART_AXIS_PRIMARY_Y, 0, 1024);
+    lv_chart_set_point_count(network_chart, UILayout::NETWORK_CHART_POINTS);
+    lv_obj_add_style(network_chart, &style_chart, 0);
+    
+    network_series = lv_chart_add_series(network_chart, UI_COLOR_INFO, LV_CHART_AXIS_PRIMARY_Y);
+}
+
+void LVGLUIManager::createVolumeControl() {
+    using namespace UILayout;
+    
+    // Create container for volume control
+    volume_card = lv_obj_create(main_screen);
+    lv_obj_set_size(volume_card, BOTTOM_CARD_WIDTH, BOTTOM_CARD_HEIGHT);
+    lv_obj_set_pos(volume_card, VOLUME_CONTROL_X, VOLUME_CONTROL_Y);
+    lv_obj_add_style(volume_card, &style_card, 0);
+    
+    // Title with speaker icon
+    lv_obj_t* title = lv_label_create(volume_card);
+    lv_label_set_text(title, LV_SYMBOL_VOLUME_MAX " Volume");
+    lv_obj_set_style_text_color(title, UI_COLOR_TEXT, 0);
+    lv_obj_set_style_text_font(title, &lv_font_montserrat_12, 0);
+    lv_obj_align(title, LV_ALIGN_TOP_LEFT, 4, 2);
+    
+    // Volume percentage label
     volume_label = lv_label_create(volume_card);
     lv_label_set_text(volume_label, "0%");
-    lv_obj_set_style_text_color(volume_label, UI_COLOR_TEXT, 0);
-    lv_obj_align(volume_label, LV_ALIGN_CENTER, 0, 6);
+    lv_obj_set_style_text_color(volume_label, UI_COLOR_WARNING, 0);
+    lv_obj_set_style_text_font(volume_label, &lv_font_montserrat_12, 0);
+    lv_obj_align(volume_label, LV_ALIGN_TOP_RIGHT, -4, 2);
     
-    // Time Label
-    time_label = lv_label_create(main_screen);
-    lv_label_set_text(time_label, "Waiting for data...");
-    lv_obj_set_style_text_color(time_label, UI_COLOR_MUTED, 0);
-    lv_obj_set_pos(time_label, CARD_START_X + 250, INFO_CARD_Y + 8);
+    // Volume slider
+    volume_slider = lv_slider_create(volume_card);
+    lv_obj_set_size(volume_slider, BOTTOM_CARD_WIDTH - 16, 8);
+    lv_obj_align(volume_slider, LV_ALIGN_CENTER, 0, 5);
+    lv_slider_set_range(volume_slider, 0, 100);
+    lv_slider_set_value(volume_slider, 50, LV_ANIM_OFF);
 }
 
-void LVGLUIManager::createCharts() {
-    using namespace UILayout;
+void LVGLUIManager::createTemperatureGauge() {
+    // Create meter for temperature
+    temp_gauge = lv_meter_create(temp_card);
+    lv_obj_set_size(temp_gauge, UILayout::TEMP_GAUGE_SIZE, UILayout::TEMP_GAUGE_SIZE);
+    lv_obj_center(temp_gauge);
+    lv_obj_remove_style(temp_gauge, NULL, LV_PART_MAIN);
+    lv_obj_remove_style(temp_gauge, NULL, LV_PART_INDICATOR);
     
-    const int icon_x = CARD_START_X + CHART_WIDTH + CHART_ICON_OFFSET;
+    // Add scale with proper configuration
+    lv_meter_scale_t* scale = lv_meter_add_scale(temp_gauge);
+    lv_meter_set_scale_ticks(temp_gauge, scale, 6, 1, 8, lv_palette_main(LV_PALETTE_GREY));
+    lv_meter_set_scale_major_ticks(temp_gauge, scale, 2, 2, 12, UI_COLOR_TEXT, 8);
+    lv_meter_set_scale_range(temp_gauge, scale, 0, 100, 240, 90);
     
-    // CPU Chart
-    cpu_chart = createStandardChart(CHART_START_Y, UI_COLOR_SUCCESS);
-    cpu_series = lv_chart_add_series(cpu_chart, UI_COLOR_SUCCESS, LV_CHART_AXIS_PRIMARY_Y);
-    createChartIcon(icon_x, CHART_START_Y + 4, LV_SYMBOL_SETTINGS, UI_COLOR_SUCCESS);
+    // Add colored arcs for different temperature ranges
+    lv_meter_indicator_t* indic1 = lv_meter_add_arc(temp_gauge, scale, 6, UI_COLOR_SUCCESS, -3);
+    lv_meter_set_indicator_start_value(temp_gauge, indic1, 0);
+    lv_meter_set_indicator_end_value(temp_gauge, indic1, 50);
     
-    // RAM Chart
-    ram_chart = createStandardChart(CHART_START_Y + CHART_SPACING, UI_COLOR_SUCCESS);
-    ram_series = lv_chart_add_series(ram_chart, UI_COLOR_SUCCESS, LV_CHART_AXIS_PRIMARY_Y);
-    createChartIcon(icon_x, CHART_START_Y + CHART_SPACING + 4, LV_SYMBOL_LIST, UI_COLOR_SUCCESS);
+    lv_meter_indicator_t* indic2 = lv_meter_add_arc(temp_gauge, scale, 6, UI_COLOR_WARNING, -3);
+    lv_meter_set_indicator_start_value(temp_gauge, indic2, 50);
+    lv_meter_set_indicator_end_value(temp_gauge, indic2, 70);
     
-    // Temperature Chart
-    temp_chart = createStandardChart(CHART_START_Y + 2 * CHART_SPACING, UI_COLOR_DANGER);
-    temp_series = lv_chart_add_series(temp_chart, UI_COLOR_DANGER, LV_CHART_AXIS_PRIMARY_Y);
-    createChartIcon(icon_x, CHART_START_Y + 2 * CHART_SPACING + 4, LV_SYMBOL_WARNING, UI_COLOR_DANGER);
-}
-
-lv_obj_t* LVGLUIManager::createStandardChart(lv_coord_t y_pos, lv_color_t color) {
-    using namespace UILayout;
+    lv_meter_indicator_t* indic3 = lv_meter_add_arc(temp_gauge, scale, 6, UI_COLOR_DANGER, -3);
+    lv_meter_set_indicator_start_value(temp_gauge, indic3, 70);
+    lv_meter_set_indicator_end_value(temp_gauge, indic3, 100);
     
-    lv_obj_t* chart = lv_chart_create(main_screen);
-    lv_obj_set_size(chart, CHART_WIDTH, CHART_HEIGHT);
-    lv_obj_set_pos(chart, CARD_START_X, y_pos);
-    lv_obj_add_style(chart, &style_chart, 0);
-    lv_chart_set_type(chart, LV_CHART_TYPE_LINE);
-    lv_chart_set_point_count(chart, CHART_POINT_COUNT);
-    lv_chart_set_range(chart, LV_CHART_AXIS_PRIMARY_Y, 0, 100);
-    lv_chart_set_update_mode(chart, LV_CHART_UPDATE_MODE_SHIFT);
-    lv_obj_set_style_line_width(chart, 2, LV_PART_ITEMS);
-    lv_obj_set_style_size(chart, 3, LV_PART_INDICATOR);
+    // Add needle with proper styling
+    temp_needle = lv_meter_add_needle_line(temp_gauge, scale, 3, UI_COLOR_TEXT, -8);
+    lv_meter_set_indicator_value(temp_gauge, temp_needle, 0); // Initialize to 0
     
-    return chart;
-}
-
-lv_obj_t* LVGLUIManager::createChartIcon(lv_coord_t x, lv_coord_t y, const char* symbol, lv_color_t color) {
-    lv_obj_t* icon = lv_label_create(main_screen);
-    lv_label_set_text(icon, symbol);
-    lv_obj_set_style_text_color(icon, color, 0);
-    lv_obj_set_style_text_font(icon, &lv_font_montserrat_16, 0);
-    lv_obj_set_pos(icon, x, y);
-    return icon;
-}
-
-lv_color_t LVGLUIManager::getColorForValue(float value, int warning_threshold, int danger_threshold) {
-    if (value > danger_threshold) return UI_COLOR_DANGER;
-    if (value > warning_threshold) return UI_COLOR_WARNING;
-    return UI_COLOR_SUCCESS;
+    // Temperature label in center
+    temp_label = lv_label_create(temp_gauge);
+    lv_label_set_text(temp_label, "0°C");
+    lv_obj_set_style_text_color(temp_label, UI_COLOR_TEXT, 0);
+    lv_obj_set_style_text_font(temp_label, &lv_font_montserrat_12, 0);
+    lv_obj_center(temp_label);
 }
 
 lv_obj_t* LVGLUIManager::createCard(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_coord_t h, const char* title) {
@@ -223,55 +266,12 @@ lv_obj_t* LVGLUIManager::createCard(lv_obj_t* parent, lv_coord_t x, lv_coord_t y
     lv_label_set_text(title_label, title);
     lv_obj_set_style_text_color(title_label, UI_COLOR_MUTED, 0);
     lv_obj_set_style_text_font(title_label, &lv_font_montserrat_12, 0);
-    lv_obj_align(title_label, LV_ALIGN_CENTER, 0, -8);
+    lv_obj_align(title_label, LV_ALIGN_TOP_MID, 0, 5);
     
     return card;
 }
 
-void LVGLUIManager::updateCard(lv_obj_t* card, lv_obj_t* label, const char* value, lv_color_t color) {
-    lv_label_set_text(label, value);
-    lv_obj_set_style_text_color(label, color, 0);
-}
-
-void LVGLUIManager::updateProgressBar(lv_obj_t* bar, int32_t value, lv_color_t color) {
-    lv_bar_set_value(bar, value, LV_ANIM_ON);
-    lv_obj_set_style_bg_color(bar, color, LV_PART_INDICATOR);
-}
-
-void LVGLUIManager::updateChart(lv_chart_series_t* series, int32_t value) {
-    // Find the chart object from our stored chart references
-    if (series == cpu_series) {
-        lv_chart_set_next_value(cpu_chart, series, value);
-    } else if (series == ram_series) {
-        lv_chart_set_next_value(ram_chart, series, value);
-    } else if (series == temp_series) {
-        lv_chart_set_next_value(temp_chart, series, value);
-    }
-}
-
-void LVGLUIManager::updateAllCharts(int32_t cpu_val, int32_t ram_val, int32_t temp_val) {
-    // Update main charts if in normal mode
-    if (!isFullScreenMode) {
-        lv_chart_set_next_value(cpu_chart, cpu_series, cpu_val);
-        lv_chart_set_next_value(ram_chart, ram_series, ram_val);
-        lv_chart_set_next_value(temp_chart, temp_series, temp_val);
-        
-        // Refresh all charts at once
-        lv_chart_refresh(cpu_chart);
-        lv_chart_refresh(ram_chart);
-        lv_chart_refresh(temp_chart);
-    } else {
-        // Update full screen chart if in full screen mode
-        if (currentFullScreenChart == 0) {
-            lv_chart_set_next_value(fullscreen_chart, fullscreen_series, cpu_val);
-        } else if (currentFullScreenChart == 1) {
-            lv_chart_set_next_value(fullscreen_chart, fullscreen_series, ram_val);
-        } else if (currentFullScreenChart == 2) {
-            lv_chart_set_next_value(fullscreen_chart, fullscreen_series, temp_val);
-        }
-        lv_chart_refresh(fullscreen_chart);
-    }
-}
+// Core UI functionality methods
 
 void LVGLUIManager::updateUI(SystemData& data) {
     if (!ui_initialized) return;
@@ -288,80 +288,119 @@ void LVGLUIManager::updateUI(SystemData& data) {
         lastForceUpdate = currentTime;
     }
     
-    // Track if any charts need updating
-    bool charts_updated = false;
-    int32_t cpu_chart_val = (int32_t)stats.cpuUsage;
-    int32_t ram_chart_val = (int32_t)stats.ramUsage;
-    int32_t temp_chart_val = stats.cpuTemp;
-    
-    // Update CPU
+    // Update CPU card and progress bar
     if (abs(stats.cpuUsage - lastStats.cpuUsage) > SystemThresholds::CPU_UPDATE_THRESHOLD || forceUpdate) {
         char cpu_text[10];
         snprintf(cpu_text, sizeof(cpu_text), "%.1f%%", stats.cpuUsage);
         lv_color_t cpu_color = getColorForValue(stats.cpuUsage, SystemThresholds::WARNING_LEVEL, SystemThresholds::DANGER_LEVEL);
-        updateCard(cpu_card, cpu_label, cpu_text, cpu_color);
+        lv_label_set_text(cpu_label, cpu_text);
         updateProgressBar(cpu_bar, (int32_t)stats.cpuUsage, cpu_color);
-        charts_updated = true;
     }
     
-    // Update RAM
+    // Update RAM card and progress bar
     if (abs(stats.ramUsage - lastStats.ramUsage) > SystemThresholds::RAM_UPDATE_THRESHOLD || forceUpdate) {
         char ram_text[10];
         snprintf(ram_text, sizeof(ram_text), "%.1f%%", stats.ramUsage);
         lv_color_t ram_color = getColorForValue(stats.ramUsage, SystemThresholds::WARNING_LEVEL, SystemThresholds::DANGER_LEVEL);
-        updateCard(ram_card, ram_label, ram_text, ram_color);
+        lv_label_set_text(ram_label, ram_text);
         updateProgressBar(ram_bar, (int32_t)stats.ramUsage, ram_color);
-        charts_updated = true;
     }
     
-    // Update DISK
-    if (abs(stats.diskUsage - lastStats.diskUsage) > SystemThresholds::DISK_UPDATE_THRESHOLD || lastStats.diskUsage == 0 || forceUpdate) {
+    // Update Disk card and progress bar
+    if (abs(stats.diskUsage - lastStats.diskUsage) > SystemThresholds::DISK_UPDATE_THRESHOLD || forceUpdate) {
         char disk_text[10];
         snprintf(disk_text, sizeof(disk_text), "%.1f%%", stats.diskUsage);
         lv_color_t disk_color = getColorForValue(stats.diskUsage, SystemThresholds::WARNING_LEVEL, SystemThresholds::DANGER_LEVEL);
-        updateCard(disk_card, disk_label, disk_text, disk_color);
+        lv_label_set_text(disk_label, disk_text);
         updateProgressBar(disk_bar, (int32_t)stats.diskUsage, disk_color);
     }
     
-    // Update Temperature
+    // Update Temperature gauge
     if (stats.cpuTemp != lastStats.cpuTemp || forceUpdate) {
-        char temp_text[10];
-        snprintf(temp_text, sizeof(temp_text), "%d°C", stats.cpuTemp);
-        lv_color_t temp_color = getColorForValue(stats.cpuTemp, SystemThresholds::TEMP_WARNING_LEVEL, SystemThresholds::TEMP_DANGER_LEVEL);
-        updateCard(temp_card, temp_label, temp_text, temp_color);
-        updateProgressBar(temp_bar, stats.cpuTemp, temp_color);
-        charts_updated = true;
+        updateTemperatureGauge(stats.cpuTemp);
     }
     
-    // Update all charts simultaneously if any data changed
-    if (charts_updated || forceUpdate) {
-        updateAllCharts(cpu_chart_val, ram_chart_val, temp_chart_val);
+    // Update CPU history chart
+    if (data.isHistoryFull() || forceUpdate) {
+        updateCPUHistoryChart(data.getCpuHistory(), data.getHistoryIndex());
     }
     
-    // Update Network
-    if (abs(stats.networkSpeed - lastStats.networkSpeed) > SystemThresholds::NETWORK_UPDATE_THRESHOLD || 
-        lastStats.networkSpeed == 0 || 
-        stats.networkSpeed == 0 || 
-        forceUpdate) {
-        updateCard(network_card, network_label, data.getFormattedNetworkSpeed().c_str(), UI_COLOR_INFO);
+    // Update Network chart and display
+    if (abs(stats.networkSpeed - lastStats.networkSpeed) > SystemThresholds::NETWORK_UPDATE_THRESHOLD || forceUpdate) {
+        updateNetworkChart(stats.networkSpeed);
+        lv_label_set_text(network_label, data.getFormattedNetworkSpeed().c_str());
     }
     
-    // Update Volume
+    // Update Volume control
     if (stats.volumeLevel != lastStats.volumeLevel || forceUpdate) {
-        char vol_text[10];
-        snprintf(vol_text, sizeof(vol_text), "%d%%", stats.volumeLevel);
-        updateCard(volume_card, volume_label, vol_text, UI_COLOR_PRIMARY);
-    }
-    
-    // Update time
-    if (stats.lastTime != lastStats.lastTime || forceUpdate) {
-        String time_text = "Updated: " + stats.lastTime;
-        lv_label_set_text(time_label, time_text.c_str());
+        updateVolumeSlider(stats.volumeLevel);
     }
     
     lastStats = stats;
 }
 
+// Update helper methods
+void LVGLUIManager::updateProgressBar(lv_obj_t* bar, int32_t value, lv_color_t color) {
+    if (bar) {
+        lv_bar_set_value(bar, value, LV_ANIM_ON);
+        lv_obj_set_style_bg_color(bar, color, LV_PART_INDICATOR);
+    }
+}
+
+void LVGLUIManager::updateCPUHistoryChart(float* history, int historySize) {
+    if (!cpu_history_series || !history) return;
+    
+    // Task Manager style scrolling: add newest point and shift left
+    // This creates a smooth scrolling effect like Windows Task Manager
+    lv_chart_set_next_value(cpu_history_chart, cpu_history_series, (int32_t)history[historySize - 1]);
+    lv_chart_refresh(cpu_history_chart);
+}
+
+void LVGLUIManager::updateNetworkChart(float speed) {
+    if (!network_series) return;
+    
+    // Add new data point to network chart
+    lv_chart_set_next_value(network_chart, network_series, (int32_t)speed);
+    lv_chart_refresh(network_chart);
+}
+
+void LVGLUIManager::updateVolumeSlider(int volume) {
+    if (!volume_slider || !volume_label) return;
+    
+    // Update slider position and label
+    lv_slider_set_value(volume_slider, volume, LV_ANIM_ON);
+    
+    char vol_text[10];
+    snprintf(vol_text, sizeof(vol_text), "%d%%", volume);
+    lv_label_set_text(volume_label, vol_text);
+}
+
+void LVGLUIManager::updateTemperatureGauge(int temp) {
+    if (!temp_needle || !temp_label || !temp_gauge) return;
+    
+    // Clamp temperature to valid range (0-100)
+    int clampedTemp = temp < 0 ? 0 : (temp > 100 ? 100 : temp);
+    
+    // Update gauge needle with animation
+    lv_meter_set_indicator_value(temp_gauge, temp_needle, clampedTemp);
+    
+    // Update center label
+    char temp_text[10];
+    snprintf(temp_text, sizeof(temp_text), "%d°C", clampedTemp);
+    lv_label_set_text(temp_label, temp_text);
+}
+
+lv_color_t LVGLUIManager::getColorForValue(float value, int warning_threshold, int danger_threshold) {
+    if (value >= danger_threshold) {
+        return UI_COLOR_DANGER;
+    } else if (value >= warning_threshold) {
+        return UI_COLOR_WARNING;
+    } else {
+        return UI_COLOR_SUCCESS;
+    }
+}
+
+// Startup and display methods
 void LVGLUIManager::showStartupScreen() {
     if (startup_screen) {
         lv_obj_del(startup_screen);
@@ -377,161 +416,86 @@ void LVGLUIManager::showStartupScreen() {
     lv_obj_set_style_text_align(logo_label, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_center(logo_label);
     
-    lv_obj_t* loading_spinner = lv_spinner_create(startup_screen, 1000, 60);
-    lv_obj_set_size(loading_spinner, 40, 40);
-    lv_obj_align(loading_spinner, LV_ALIGN_CENTER, 0, 50);
-    lv_obj_set_style_arc_color(loading_spinner, UI_COLOR_PRIMARY, LV_PART_INDICATOR);
-    
     lv_scr_load(startup_screen);
 }
 
 void LVGLUIManager::showWiFiInfo(String ip, String mdns, int port) {
-    if (main_screen) {
-        lv_obj_clean(main_screen);
-        
-        lv_obj_t* wifi_label = lv_label_create(main_screen);
-        String wifi_info = "WiFi Connected!\nIP: " + ip + "\nMDNS: " + mdns + "\nPort: " + String(port);
-        lv_label_set_text(wifi_label, wifi_info.c_str());
-        lv_obj_set_style_text_color(wifi_label, UI_COLOR_SUCCESS, 0);
-        lv_obj_set_style_text_font(wifi_label, &lv_font_montserrat_14, 0);
-        lv_obj_set_style_text_align(wifi_label, LV_TEXT_ALIGN_CENTER, 0);
-        lv_obj_center(wifi_label);
-        
-        lv_scr_load(main_screen);
-    }
+    lv_obj_t* wifi_screen = lv_obj_create(NULL);
+    lv_obj_set_style_bg_color(wifi_screen, UI_COLOR_DARK, 0);
+    
+    lv_obj_t* info_label = lv_label_create(wifi_screen);
+    String info_text = "WiFi Connected\n\nIP: " + ip + "\nHostname: " + mdns + "\nPort: " + String(port);
+    lv_label_set_text(info_label, info_text.c_str());
+    lv_obj_set_style_text_color(info_label, UI_COLOR_TEXT, 0);
+    lv_obj_set_style_text_align(info_label, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_center(info_label);
+    
+    lv_scr_load(wifi_screen);
 }
 
 void LVGLUIManager::showUDPText(String text) {
-    if (main_screen) {
-        lv_obj_clean(main_screen);
-        
-        lv_obj_t* text_label = lv_label_create(main_screen);
-        lv_label_set_text(text_label, text.c_str());
-        lv_obj_set_style_text_color(text_label, UI_COLOR_TEXT, 0);
-        lv_obj_set_style_text_font(text_label, &lv_font_montserrat_14, 0);
-        lv_obj_center(text_label);
-        
-        lv_scr_load(main_screen);
-    }
+    lv_obj_t* text_screen = lv_obj_create(NULL);
+    lv_obj_set_style_bg_color(text_screen, UI_COLOR_DARK, 0);
+    
+    lv_obj_t* text_label = lv_label_create(text_screen);
+    lv_label_set_text(text_label, text.c_str());
+    lv_obj_set_style_text_color(text_label, UI_COLOR_TEXT, 0);
+    lv_obj_set_style_text_align(text_label, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_center(text_label);
+    
+    lv_scr_load(text_screen);
 }
 
 void LVGLUIManager::showTouchDebug(int x, int y, int z) {
-    if (main_screen) {
-        lv_obj_clean(main_screen);
-        
-        lv_obj_t* touch_label = lv_label_create(main_screen);
-        String touch_info = "Touch Debug\nX: " + String(x) + "\nY: " + String(y) + "\nZ: " + String(z);
-        lv_label_set_text(touch_label, touch_info.c_str());
-        lv_obj_set_style_text_color(touch_label, UI_COLOR_INFO, 0);
-        lv_obj_set_style_text_font(touch_label, &lv_font_montserrat_14, 0);
-        lv_obj_set_style_text_align(touch_label, LV_TEXT_ALIGN_CENTER, 0);
-        lv_obj_center(touch_label);
-        
-        lv_scr_load(main_screen);
-    }
+    // Simple touch debug display - could be enhanced
+    Serial.printf("Touch: X=%d, Y=%d, Z=%d\n", x, y, z);
 }
 
+// Touch handling with landscape layout
 void LVGLUIManager::handleTouch(int x, int y) {
-    if (!ui_initialized) return;
-    
     using namespace TouchZones;
-    using namespace UILayout;
     
-    // If in full screen mode, return to main UI
-    if (isFullScreenMode) {
-        returnToMainUI();
-        return;
-    }
-    
-    // Chart touch detection
-    if (x >= CARD_START_X && x <= (CARD_START_X + CHART_WIDTH)) {
-        if (y >= CPU_CHART_Y_MIN && y <= CPU_CHART_Y_MAX) {
-            showFullScreenChart(static_cast<int>(ChartType::CPU));
-        } else if (y >= RAM_CHART_Y_MIN && y <= RAM_CHART_Y_MAX) {
-            showFullScreenChart(static_cast<int>(ChartType::RAM));
-        } else if (y >= TEMP_CHART_Y_MIN && y <= TEMP_CHART_Y_MAX) {
-            showFullScreenChart(static_cast<int>(ChartType::TEMPERATURE));
-        }
-    }
-    
-    // Card touch detection
-    else if (y >= CARD_START_Y && y <= CARD_END_Y) {
+    // Check touch zones for landscape layout
+    if (y >= CARD_Y_MIN && y <= CARD_Y_MAX) {
+        // Top row cards
         if (x >= CPU_CARD_X_MIN && x <= CPU_CARD_X_MAX) {
-            showFullScreenChart(static_cast<int>(ChartType::CPU));
+            Serial.println("CPU card touched");
         } else if (x >= RAM_CARD_X_MIN && x <= RAM_CARD_X_MAX) {
-            showFullScreenChart(static_cast<int>(ChartType::RAM));
-        } else if (x >= DISK_CARD_X_MIN && x <= DISK_CARD_X_MAX) {
-            showFullScreenChart(static_cast<int>(ChartType::DISK));
+            Serial.println("RAM card touched");  
         } else if (x >= TEMP_CARD_X_MIN && x <= TEMP_CARD_X_MAX) {
-            showFullScreenChart(static_cast<int>(ChartType::TEMPERATURE));
+            Serial.println("Temperature card touched");
+        } else if (x >= DISK_CARD_X_MIN && x <= DISK_CARD_X_MAX) {
+            Serial.println("Disk card touched");
         }
+    } else if (x >= CPU_CHART_X_MIN && x <= CPU_CHART_X_MAX && 
+               y >= CPU_CHART_Y_MIN && y <= CPU_CHART_Y_MAX) {
+        Serial.println("CPU chart touched");
+    } else if (x >= NETWORK_CHART_X_MIN && x <= NETWORK_CHART_X_MAX &&
+               y >= NETWORK_CHART_Y_MIN && y <= NETWORK_CHART_Y_MAX) {
+        Serial.println("Network chart touched");
+    }
+    // Volume touch is handled separately in main.cpp
+}
+
+void LVGLUIManager::handleVolumeTouch(int x, int y, SystemData& data) {
+    // This method can be called from the main touch handler
+    // Calculate relative position within volume control and update volume
+    int local_x = x - UILayout::VOLUME_CONTROL_X;
+    if (local_x >= 25 && local_x <= UILayout::BOTTOM_CARD_WIDTH - 15) {
+        int slider_width = UILayout::BOTTOM_CARD_WIDTH - 40;
+        float volume_percent = ((local_x - 25) * 100.0f) / slider_width;
+        volume_percent = constrain(volume_percent, 0, 100);
+        
+        data.setVolume((int)volume_percent);
+        updateVolumeSlider((int)volume_percent);
     }
 }
 
+// Placeholder methods for full screen functionality
 void LVGLUIManager::showFullScreenChart(int chartType) {
-    if (!ui_initialized) return;
-    
     isFullScreenMode = true;
     currentFullScreenChart = chartType;
-    
-    // Clear main screen
-    lv_obj_clean(main_screen);
-    
-    // Create full screen chart
-    fullscreen_chart = lv_chart_create(main_screen);
-    lv_obj_set_size(fullscreen_chart, SCREEN_WIDTH - 20, SCREEN_HEIGHT - 60);
-    lv_obj_set_pos(fullscreen_chart, 10, 30);
-    lv_obj_add_style(fullscreen_chart, &style_chart, 0);
-    lv_chart_set_type(fullscreen_chart, LV_CHART_TYPE_LINE);
-    lv_chart_set_point_count(fullscreen_chart, 50);
-    lv_chart_set_update_mode(fullscreen_chart, LV_CHART_UPDATE_MODE_SHIFT);
-    
-    // Create title and configure based on chart type
-    lv_obj_t* title_label = lv_label_create(main_screen);
-    lv_obj_set_style_text_font(title_label, &lv_font_montserrat_16, 0);
-    lv_obj_set_pos(title_label, 10, 5);
-    
-    switch(chartType) {
-        case 0: // CPU
-            lv_label_set_text(title_label, LV_SYMBOL_SETTINGS " CPU Usage History");
-            lv_obj_set_style_text_color(title_label, UI_COLOR_SUCCESS, 0);
-            lv_chart_set_range(fullscreen_chart, LV_CHART_AXIS_PRIMARY_Y, 0, 100);
-            fullscreen_series = lv_chart_add_series(fullscreen_chart, UI_COLOR_SUCCESS, LV_CHART_AXIS_PRIMARY_Y);
-            break;
-        case 1: // RAM
-            lv_label_set_text(title_label, LV_SYMBOL_LIST " RAM Usage History");
-            lv_obj_set_style_text_color(title_label, UI_COLOR_SUCCESS, 0);
-            lv_chart_set_range(fullscreen_chart, LV_CHART_AXIS_PRIMARY_Y, 0, 100);
-            fullscreen_series = lv_chart_add_series(fullscreen_chart, UI_COLOR_SUCCESS, LV_CHART_AXIS_PRIMARY_Y);
-            break;
-        case 2: // Temperature
-            lv_label_set_text(title_label, LV_SYMBOL_WARNING " Temperature History");
-            lv_obj_set_style_text_color(title_label, UI_COLOR_DANGER, 0);
-            lv_chart_set_range(fullscreen_chart, LV_CHART_AXIS_PRIMARY_Y, 0, 100);
-            fullscreen_series = lv_chart_add_series(fullscreen_chart, UI_COLOR_DANGER, LV_CHART_AXIS_PRIMARY_Y);
-            break;
-        case 3: // Disk
-            lv_label_set_text(title_label, LV_SYMBOL_DRIVE " Disk Usage");
-            lv_obj_set_style_text_color(title_label, UI_COLOR_WARNING, 0);
-            lv_chart_set_range(fullscreen_chart, LV_CHART_AXIS_PRIMARY_Y, 0, 100);
-            fullscreen_series = lv_chart_add_series(fullscreen_chart, UI_COLOR_WARNING, LV_CHART_AXIS_PRIMARY_Y);
-            break;
-    }
-    
-    // Add instructions
-    lv_obj_t* instruction_label = lv_label_create(main_screen);
-    lv_label_set_text(instruction_label, "Touch anywhere to return");
-    lv_obj_set_style_text_color(instruction_label, UI_COLOR_MUTED, 0);
-    lv_obj_set_style_text_font(instruction_label, &lv_font_montserrat_12, 0);
-    lv_obj_set_pos(instruction_label, SCREEN_WIDTH - 150, 5);
-    
-    // Copy existing chart data if available (simplified approach)
-    // Initialize with some sample data for demonstration
-    for (int i = 0; i < 20; i++) {
-        lv_chart_set_next_value(fullscreen_chart, fullscreen_series, 0);
-    }
-    
-    lv_scr_load(main_screen);
+    Serial.printf("Full screen chart mode: %d\n", chartType);
 }
 
 void LVGLUIManager::returnToMainUI() {
@@ -540,13 +504,9 @@ void LVGLUIManager::returnToMainUI() {
     isFullScreenMode = false;
     currentFullScreenChart = -1;
     
-    // Recreate the main UI
+    // Recreate the main UI with landscape layout
     lv_obj_clean(main_screen);
-    createStatusBar();
-    createSystemCards();
-    createProgressBars();
-    createInfoCards();
-    createCharts();
+    createLandscapeUI();
     
     lv_scr_load(main_screen);
 }

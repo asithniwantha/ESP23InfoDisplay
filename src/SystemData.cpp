@@ -152,3 +152,19 @@ String SystemData::getFormattedNetworkSpeed() {
         }
     }
 }
+
+// Volume control methods
+void SystemData::setVolume(int volume) {
+    currentData.volumeLevel = constrain(volume, 0, 100);
+}
+
+int SystemData::getVolume() const {
+    return currentData.volumeLevel;
+}
+
+String SystemData::getFormattedVolume() const {
+    if (currentData.volumeLevel < 0) {
+        return "N/A";
+    }
+    return String(currentData.volumeLevel) + "%";
+}

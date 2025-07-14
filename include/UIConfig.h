@@ -10,67 +10,86 @@ namespace NetworkConfig {
     constexpr const char* MDNS_HOSTNAME = "esp32display";
 }
 
-// UI Layout Constants
+// UI Layout Constants - Landscape Mode (320x240)
 namespace UILayout {
     // Use screen dimensions from Defines.h
     // constexpr int SCREEN_WIDTH = 320;  // Now comes from Defines.h
     // constexpr int SCREEN_HEIGHT = 240; // Now comes from Defines.h
     
-    // Status bar
-    constexpr int STATUS_BAR_HEIGHT = 20;
+    // Main layout
+    constexpr int PADDING = 4;
+    constexpr int GAP = 4;
     
-    // System cards
-    constexpr int CARD_WIDTH = 75;
-    constexpr int CARD_HEIGHT = 35;
-    constexpr int CARD_SPACING = 5;
-    constexpr int CARD_START_X = 5;
-    constexpr int CARD_START_Y = 25;
-    constexpr int CARD_END_Y = CARD_START_Y + CARD_HEIGHT;
+    // Top row - 4 metric cards (adjusted to fit 320px width)
+    constexpr int CARD_WIDTH = 72;   // Reduced from 75 to fit better
+    constexpr int CARD_HEIGHT = 58;  // Reduced to fit in 240px height
+    constexpr int CARD_ROW_Y = PADDING;
     
-    // Progress bars
-    constexpr int PROGRESS_BAR_WIDTH = 75;
-    constexpr int PROGRESS_BAR_HEIGHT = 8;
-    constexpr int PROGRESS_BAR_Y = 65;
+    // CPU history chart (properly sized to avoid overlap)
+    constexpr int CPU_CHART_Y = CARD_ROW_Y + CARD_HEIGHT + GAP;
+    constexpr int CPU_CHART_WIDTH = 320 - (PADDING * 2);
+    constexpr int CPU_CHART_HEIGHT = 80;  // Reduced to prevent overlap
     
-    // Info cards
-    constexpr int INFO_CARD_WIDTH = 120;
-    constexpr int INFO_CARD_HEIGHT = 30;
-    constexpr int INFO_CARD_SPACING = 8;
-    constexpr int INFO_CARD_Y = 85;
+    // Bottom row - Network and Volume (moved to very bottom)
+    constexpr int BOTTOM_CARD_HEIGHT = 50;  // Fixed height for bottom cards
+    constexpr int BOTTOM_ROW_Y = 240 - BOTTOM_CARD_HEIGHT - PADDING;  // Position at bottom
+    constexpr int BOTTOM_CARD_WIDTH = (320 - (PADDING * 3)) / 2;  // = 154px each
     
-    // Charts
-    constexpr int CHART_WIDTH = 255;
-    constexpr int CHART_HEIGHT = 25;
-    constexpr int CHART_SPACING = 32;
-    constexpr int CHART_START_Y = 125;
-    constexpr int CHART_POINT_COUNT = 50;
-    constexpr int CHART_ICON_OFFSET = 8;
+    // Network chart (left)
+    constexpr int NETWORK_CHART_X = PADDING;
+    constexpr int NETWORK_CHART_Y = BOTTOM_ROW_Y;
+    
+    // Volume control (right)
+    constexpr int VOLUME_CONTROL_X = PADDING + BOTTOM_CARD_WIDTH + GAP;
+    constexpr int VOLUME_CONTROL_Y = BOTTOM_ROW_Y;
+    
+    // Chart configurations
+    constexpr int CPU_CHART_POINTS = 80;
+    constexpr int NETWORK_CHART_POINTS = 40;
+    
+    // Temperature gauge (reduced size for smaller cards)
+    constexpr int TEMP_GAUGE_SIZE = 45;
 }
 
-// Touch zones
+// Touch zones - Landscape Layout
 namespace TouchZones {
-    // Card touch areas
-    constexpr int CPU_CARD_X_MIN = UILayout::CARD_START_X;
+    // Top row card positions (x positions only, y is same for all)
+    constexpr int CARD_Y_MIN = UILayout::CARD_ROW_Y;
+    constexpr int CARD_Y_MAX = CARD_Y_MIN + UILayout::CARD_HEIGHT;
+    
+    // CPU card (position 0)
+    constexpr int CPU_CARD_X_MIN = UILayout::PADDING;
     constexpr int CPU_CARD_X_MAX = CPU_CARD_X_MIN + UILayout::CARD_WIDTH;
     
-    constexpr int RAM_CARD_X_MIN = CPU_CARD_X_MAX + UILayout::CARD_SPACING;
+    // RAM card (position 1)
+    constexpr int RAM_CARD_X_MIN = CPU_CARD_X_MAX + UILayout::GAP;
     constexpr int RAM_CARD_X_MAX = RAM_CARD_X_MIN + UILayout::CARD_WIDTH;
     
-    constexpr int DISK_CARD_X_MIN = RAM_CARD_X_MAX + UILayout::CARD_SPACING;
-    constexpr int DISK_CARD_X_MAX = DISK_CARD_X_MIN + UILayout::CARD_WIDTH;
-    
-    constexpr int TEMP_CARD_X_MIN = DISK_CARD_X_MAX + UILayout::CARD_SPACING;
+    // Temperature card (position 2)
+    constexpr int TEMP_CARD_X_MIN = RAM_CARD_X_MAX + UILayout::GAP;
     constexpr int TEMP_CARD_X_MAX = TEMP_CARD_X_MIN + UILayout::CARD_WIDTH;
     
-    // Chart touch areas
-    constexpr int CPU_CHART_Y_MIN = UILayout::CHART_START_Y;
-    constexpr int CPU_CHART_Y_MAX = CPU_CHART_Y_MIN + UILayout::CHART_HEIGHT;
+    // Disk card (position 3)
+    constexpr int DISK_CARD_X_MIN = TEMP_CARD_X_MAX + UILayout::GAP;
+    constexpr int DISK_CARD_X_MAX = DISK_CARD_X_MIN + UILayout::CARD_WIDTH;
     
-    constexpr int RAM_CHART_Y_MIN = CPU_CHART_Y_MAX + 7;
-    constexpr int RAM_CHART_Y_MAX = RAM_CHART_Y_MIN + UILayout::CHART_HEIGHT;
+    // CPU chart touch area
+    constexpr int CPU_CHART_X_MIN = UILayout::PADDING;
+    constexpr int CPU_CHART_X_MAX = CPU_CHART_X_MIN + UILayout::CPU_CHART_WIDTH;
+    constexpr int CPU_CHART_Y_MIN = UILayout::CPU_CHART_Y;
+    constexpr int CPU_CHART_Y_MAX = CPU_CHART_Y_MIN + UILayout::CPU_CHART_HEIGHT;
     
-    constexpr int TEMP_CHART_Y_MIN = RAM_CHART_Y_MAX + 7;
-    constexpr int TEMP_CHART_Y_MAX = TEMP_CHART_Y_MIN + UILayout::CHART_HEIGHT;
+    // Network chart touch area
+    constexpr int NETWORK_CHART_X_MIN = UILayout::NETWORK_CHART_X;
+    constexpr int NETWORK_CHART_X_MAX = NETWORK_CHART_X_MIN + UILayout::BOTTOM_CARD_WIDTH;
+    constexpr int NETWORK_CHART_Y_MIN = UILayout::NETWORK_CHART_Y;
+    constexpr int NETWORK_CHART_Y_MAX = NETWORK_CHART_Y_MIN + UILayout::BOTTOM_CARD_HEIGHT;
+    
+    // Volume control touch area
+    constexpr int VOLUME_CONTROL_X_MIN = UILayout::VOLUME_CONTROL_X;
+    constexpr int VOLUME_CONTROL_X_MAX = VOLUME_CONTROL_X_MIN + UILayout::BOTTOM_CARD_WIDTH;
+    constexpr int VOLUME_CONTROL_Y_MIN = UILayout::VOLUME_CONTROL_Y;
+    constexpr int VOLUME_CONTROL_Y_MAX = VOLUME_CONTROL_Y_MIN + UILayout::BOTTOM_CARD_HEIGHT;
 }
 
 // System thresholds

@@ -5,6 +5,7 @@
 #include <ArduinoJson.h>
 #include "SystemData.h"
 #include "Defines.h"
+#include "UIConfig.h"
 #include "LVGLDriver.h"
 #include "LVGLUIManager.h"
 
@@ -20,6 +21,10 @@ public:
     void printTouchToDisplay(int x, int y, int z);
     void handleElementTouch(int x, int y);
     void resetUIState();
+    
+    // Volume control methods
+    void handleVolumeTouch(int x, int y, SystemData& data);
+    void onVolumeChanged(int newVolume);
 
 private:
     LVGLDriver lvglDriver;

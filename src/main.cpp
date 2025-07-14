@@ -76,7 +76,14 @@ void loop() {
         touchManager.calibrate(p);
         
         touchManager.printToSerial(p.x, p.y, p.z);
-        displayManager.handleElementTouch(p.x, p.y);
+        
+        // Check if touch is in volume control area
+        if (p.x >= TouchZones::VOLUME_CONTROL_X_MIN && p.x <= TouchZones::VOLUME_CONTROL_X_MAX &&
+            p.y >= TouchZones::VOLUME_CONTROL_Y_MIN && p.y <= TouchZones::VOLUME_CONTROL_Y_MAX) {
+            displayManager.handleVolumeTouch(p.x, p.y, systemData);
+        } else {
+            displayManager.handleElementTouch(p.x, p.y);
+        }
 
         delay(100); // Debounce
     }
