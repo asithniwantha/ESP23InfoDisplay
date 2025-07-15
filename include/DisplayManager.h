@@ -33,6 +33,10 @@ public:
     void handleVolumeTouch(int x, int y, SystemData& data);
     void onVolumeChanged(int newVolume);
 
+    // Loading screen for WiFi
+    void showWiFiLoadingScreen();
+    void hideWiFiLoadingScreen();
+
 private:
     LVGLDriver lvglDriver;
     LVGLUIManager uiManager;

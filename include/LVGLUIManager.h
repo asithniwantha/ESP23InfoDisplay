@@ -27,6 +27,10 @@ public:
     bool hasRecentData();
     void setDataReceived();
     void checkDataTimeout(); // Check if we should switch to clock due to timeout
+
+    // Loading screen for WiFi
+    void showWiFiLoadingScreen();
+    void hideWiFiLoadingScreen();
     
 private:
     // Main screen objects

@@ -475,6 +475,30 @@ void LVGLUIManager::showTouchDebug(int x, int y, int z) {
     Serial.printf("Touch: X=%d, Y=%d, Z=%d\n", x, y, z);
 }
 
+// WiFi loading screen implementation
+static lv_obj_t* wifi_loading_screen = nullptr;
+
+void LVGLUIManager::showWiFiLoadingScreen() {
+    if (wifi_loading_screen) {
+        lv_obj_del(wifi_loading_screen);
+    }
+    wifi_loading_screen = lv_obj_create(NULL);
+    lv_obj_set_style_bg_color(wifi_loading_screen, UI_COLOR_DARK, 0);
+    lv_obj_t* loading_label = lv_label_create(wifi_loading_screen);
+    lv_label_set_text(loading_label, "Connecting to WiFi...\nPlease wait");
+    lv_obj_set_style_text_color(loading_label, UI_COLOR_PRIMARY, 0);
+    lv_obj_set_style_text_align(loading_label, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_center(loading_label);
+    lv_scr_load(wifi_loading_screen);
+}
+
+void LVGLUIManager::hideWiFiLoadingScreen() {
+    if (wifi_loading_screen) {
+        lv_obj_del(wifi_loading_screen);
+        wifi_loading_screen = nullptr;
+    }
+}
+
 // Touch handling with landscape layout
 void LVGLUIManager::handleTouch(int x, int y) {
     using namespace TouchZones;

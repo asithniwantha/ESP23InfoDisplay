@@ -35,8 +35,14 @@ void setup() {
     displayManager.begin();
     displayManager.showStartupScreen();
 
+    // Show WiFi loading screen
+    //displayManager.showWiFiLoadingScreen();
+
     // Initialize network
     networkManager.begin();
+
+    // Hide WiFi loading screen after connection
+    //displayManager.hideWiFiLoadingScreen();
     
     // Brief WiFi info display (2 seconds)
     displayManager.displayWiFiInfo(networkManager.getLocalIP(), 

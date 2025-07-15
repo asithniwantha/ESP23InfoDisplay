@@ -38,6 +38,14 @@ void DisplayManager::handleElementTouch(int x, int y) {
     uiManager.handleTouch(x, y);
 }
 
+void DisplayManager::showWiFiLoadingScreen() {
+    uiManager.showWiFiLoadingScreen();
+}
+
+void DisplayManager::hideWiFiLoadingScreen() {
+    uiManager.hideWiFiLoadingScreen();
+}
+
 void DisplayManager::resetUIState() {
     uiInitialized = false;
 }
