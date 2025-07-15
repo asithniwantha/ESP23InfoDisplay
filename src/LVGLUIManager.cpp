@@ -1,6 +1,8 @@
 #include "LVGLUIManager.h"
 #include "UIConfig.h"
+
 #include "NetworkManager.h"
+#include "lv_font_digital_80.h" // 7-segment digital font (replace with real font file)
 
 // Modern color palette using UIConfig constants
 #define UI_COLOR_PRIMARY   lv_color_hex(UIColors::PRIMARY)
@@ -561,9 +563,9 @@ void LVGLUIManager::returnToMainUI() {
 
 void LVGLUIManager::showClockScreen() {
     if (isClockMode) return; // Already in clock mode
-    
+
     isClockMode = true;
-    
+
     // Create clock screen if it doesn't exist
     if (!clock_screen) {
         // Use the root screen as the parent
@@ -580,66 +582,52 @@ void LVGLUIManager::showClockScreen() {
         lv_obj_set_style_pad_all(clock_screen, 0, LV_PART_ANY | LV_STATE_ANY);
         // Load the screen immediately so it becomes the root
         lv_scr_load(clock_screen);
-        
-        // MAIN DIGITAL TIME - Maximum size and impact
+
+        // AM/PM indicator - white, vertically centered next to hour
+        clock_ampm_label = lv_label_create(clock_screen);
+        lv_obj_set_style_text_color(clock_ampm_label, lv_color_hex(0xFFFFFF), 0);
+        lv_obj_set_style_text_font(clock_ampm_label, &lv_font_montserrat_16, 0);
+        lv_obj_set_style_text_align(clock_ampm_label, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_set_style_text_letter_space(clock_ampm_label, 2, 0);
+        lv_obj_set_style_bg_opa(clock_ampm_label, LV_OPA_0, 0);
+        lv_obj_set_style_border_width(clock_ampm_label, 0, 0);
+        lv_obj_align(clock_ampm_label, LV_ALIGN_LEFT_MID, 20, 0); // Left, vertically centered
+        // Seconds label - below main time, centered
+        clock_seconds_label = lv_label_create(clock_screen);
+        lv_obj_set_style_text_color(clock_seconds_label, lv_color_hex(0xAAAAAA), 0);
+        lv_obj_set_style_text_font(clock_seconds_label, &lv_font_montserrat_16, 0);
+        lv_obj_set_style_text_align(clock_seconds_label, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_set_style_bg_opa(clock_seconds_label, LV_OPA_0, 0);
+        lv_obj_set_style_border_width(clock_seconds_label, 0, 0);
+        lv_obj_align(clock_seconds_label, LV_ALIGN_CENTER, -40, 50); // Below main time, shifted left
+
+        // MAIN DIGITAL TIME - Maximum size and impact, white, centered, 7-segment font
         clock_time_label = lv_label_create(clock_screen);
-        lv_obj_set_size(clock_time_label, 320, 100); // Full width, large height
-        
-        // BRIGHT DIGITAL GREEN - Classic digital clock color
-        lv_obj_set_style_text_color(clock_time_label, lv_color_hex(0x00FF00), 0);
-        lv_obj_set_style_text_font(clock_time_label, &lv_font_montserrat_16, 0);
+        lv_obj_set_size(clock_time_label, 300, 120); // Nearly full width, very large height
+        lv_obj_set_style_text_color(clock_time_label, lv_color_hex(0xFFFFFF), 0);
+        // Use the digital 7-segment font (replace placeholder with real font file!)
+        lv_obj_set_style_text_font(clock_time_label, &lv_font_digital_80, 0);
         lv_obj_set_style_text_align(clock_time_label, LV_TEXT_ALIGN_CENTER, 0);
-        
-        // Clean digital appearance
         lv_obj_set_style_bg_opa(clock_time_label, LV_OPA_0, 0);
         lv_obj_set_style_border_width(clock_time_label, 0, 0);
         lv_obj_set_style_pad_all(clock_time_label, 0, 0);
-        
-        // WIDE DIGITAL SPACING - Makes text appear much larger
-        lv_obj_set_style_text_letter_space(clock_time_label, 12, 0);
-        
-        // INTENSE GREEN GLOW - Digital display effect
-        lv_obj_set_style_shadow_width(clock_time_label, 30, 0);
-        lv_obj_set_style_shadow_color(clock_time_label, lv_color_hex(0x00FF00), 0);
-        lv_obj_set_style_shadow_opa(clock_time_label, LV_OPA_90, 0);
-        lv_obj_set_style_shadow_ofs_x(clock_time_label, 0, 0);
-        lv_obj_set_style_shadow_ofs_y(clock_time_label, 0, 0);
-        lv_obj_set_style_shadow_spread(clock_time_label, 5, 0);
-        
-        // Center the time display
-        lv_obj_align(clock_time_label, LV_ALIGN_CENTER, 0, -20);
-        
-        // AM/PM indicator - smaller but visible
-        clock_ampm_label = lv_label_create(clock_screen);
-        lv_obj_set_style_text_color(clock_ampm_label, lv_color_hex(0x00AA00), 0);
-        lv_obj_set_style_text_font(clock_ampm_label, &lv_font_montserrat_14, 0);
-        lv_obj_set_style_text_align(clock_ampm_label, LV_TEXT_ALIGN_CENTER, 0);
-        lv_obj_set_style_text_letter_space(clock_ampm_label, 4, 0);
-        lv_obj_set_style_bg_opa(clock_ampm_label, LV_OPA_0, 0);
-        lv_obj_set_style_border_width(clock_ampm_label, 0, 0);
-        
-        // Subtle glow for AM/PM
-        lv_obj_set_style_shadow_width(clock_ampm_label, 15, 0);
-        lv_obj_set_style_shadow_color(clock_ampm_label, lv_color_hex(0x00AA00), 0);
-        lv_obj_set_style_shadow_opa(clock_ampm_label, LV_OPA_60, 0);
-        lv_obj_set_style_shadow_ofs_x(clock_ampm_label, 0, 0);
-        lv_obj_set_style_shadow_ofs_y(clock_ampm_label, 0, 0);
-        
-        lv_obj_align(clock_ampm_label, LV_ALIGN_CENTER, 140, -20); // Right of time
-        
-        // Date display - minimal digital style
+        lv_obj_set_style_text_letter_space(clock_time_label, 2, 0); // Minimal spacing, font is already wide
+        lv_obj_align(clock_time_label, LV_ALIGN_CENTER, 0, -20); // Centered, shifted slightly left
+        // NOTE: You must generate and add a real 7-segment font file for this to work!
+
+        // Date display - subtle, below time
         clock_date_label = lv_label_create(clock_screen);
-        lv_obj_set_style_text_color(clock_date_label, lv_color_hex(0x004400), 0);
+        lv_obj_set_style_text_color(clock_date_label, lv_color_hex(0x444444), 0);
         lv_obj_set_style_text_font(clock_date_label, &lv_font_montserrat_12, 0);
         lv_obj_set_style_text_align(clock_date_label, LV_TEXT_ALIGN_CENTER, 0);
         lv_obj_set_style_text_letter_space(clock_date_label, 2, 0);
         lv_obj_set_style_bg_opa(clock_date_label, LV_OPA_0, 0);
         lv_obj_set_style_border_width(clock_date_label, 0, 0);
         lv_obj_align(clock_date_label, LV_ALIGN_CENTER, 0, 60);
-        
-        // Status message - very dim
+
+        // Status message - very dim, at bottom
         clock_status_label = lv_label_create(clock_screen);
-        lv_obj_set_style_text_color(clock_status_label, lv_color_hex(0x002200), 0);
+        lv_obj_set_style_text_color(clock_status_label, lv_color_hex(0x222222), 0);
         lv_obj_set_style_text_font(clock_status_label, &lv_font_montserrat_12, 0);
         lv_obj_set_style_text_align(clock_status_label, LV_TEXT_ALIGN_CENTER, 0);
         lv_obj_set_style_bg_opa(clock_status_label, LV_OPA_0, 0);
@@ -647,14 +635,14 @@ void LVGLUIManager::showClockScreen() {
         lv_label_set_text(clock_status_label, "WAITING FOR DATA");
         lv_obj_align(clock_status_label, LV_ALIGN_BOTTOM_MID, 0, -5);
     }
-    
+
     // Update time immediately with NetworkManager
     updateClockScreen(nullptr);
-    
+
     // Load the clock screen
     lv_scr_load(clock_screen);
-    
-    Serial.println("Digital clock activated - pure black background with green digits");
+
+    Serial.println("Digital clock activated - pure black background with white digits");
 }
 
 void LVGLUIManager::updateClockScreen(NetworkManager* networkManager) {
@@ -662,17 +650,20 @@ void LVGLUIManager::updateClockScreen(NetworkManager* networkManager) {
     
     if (networkManager && networkManager->isTimeSync()) {
         // Use real 12-hour time from NTP with digital styling
-        String timeStr = networkManager->getCurrentTime12Hour();
+        String timeFull = networkManager->getCurrentTime12Hour(); // e.g. 01:59:30
         String dateStr = networkManager->getCurrentDate();
         String ampmStr = networkManager->getAMPM();
         
-        // Format time for digital display (remove seconds for cleaner big digits)
-        int colonPos = timeStr.lastIndexOf(':');
-        if (colonPos > 0) {
-            timeStr = timeStr.substring(0, colonPos); // Remove seconds for bigger appearance
+        // Split time into HH:MM and SS
+        int lastColon = timeFull.lastIndexOf(':');
+        String timeMain = timeFull;
+        String seconds = "00";
+        if (lastColon > 0) {
+            timeMain = timeFull.substring(0, lastColon); // HH:MM
+            seconds = timeFull.substring(lastColon + 1); // SS
         }
-        
-        lv_label_set_text(clock_time_label, timeStr.c_str());
+        lv_label_set_text(clock_time_label, timeMain.c_str());
+        lv_label_set_text(clock_seconds_label, seconds.c_str());
         lv_label_set_text(clock_date_label, dateStr.c_str());
         lv_label_set_text(clock_ampm_label, ampmStr.c_str());
     } else {
@@ -681,17 +672,16 @@ void LVGLUIManager::updateClockScreen(NetworkManager* networkManager) {
         unsigned long totalSeconds = (currentTime / 1000) % 86400;
         unsigned long hours24 = (totalSeconds / 3600) % 24;
         unsigned long minutes = (totalSeconds / 60) % 60;
-        
-        // Convert to 12-hour format (no seconds for bigger digits)
+        unsigned long seconds = totalSeconds % 60;
         unsigned long hours12 = hours24 == 0 ? 12 : (hours24 > 12 ? hours24 - 12 : hours24);
         String ampm = hours24 < 12 ? "AM" : "PM";
-        
-        // Digital clock format - BIG DIGITS only
         char timeStr[10];
         snprintf(timeStr, sizeof(timeStr), "%lu:%02lu", hours12, minutes);
+        char secStr[4];
+        snprintf(secStr, sizeof(secStr), "%02lu", seconds);
         lv_label_set_text(clock_time_label, timeStr);
+        lv_label_set_text(clock_seconds_label, secStr);
         lv_label_set_text(clock_ampm_label, ampm.c_str());
-        
         char dateStr[32];
         if (networkManager && !networkManager->isTimeSync()) {
             snprintf(dateStr, sizeof(dateStr), "SYNC...");

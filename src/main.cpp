@@ -1,3 +1,4 @@
+#include "lv_font_digital_80.h" // Ensure the digital font is linked
 /*  ESP32 System Monitor - Clean Refactored Version
     Modular architecture with separate classes for:
     - DisplayManager: All display and UI functionality
@@ -56,11 +57,10 @@ void setup() {
     // Initialize system data
     systemData.reset();
     
-    // Show clock screen after all initialization is complete
+    // Show the new digital clock screen after all initialization is complete
     displayManager.showClockAfterSetup();
-    
     Serial.println("System initialized successfully!");
-    Serial.println("Showing clock until UDP data received...");
+    Serial.println("Showing new digital clock until UDP data received...");
 }
 
 void loop() {
@@ -104,9 +104,7 @@ void loop() {
     
     // Check for data timeout and switch to clock if needed
     displayManager.checkDataTimeout();
-    
-    // Update clock display if no recent data
+    // Update clock display with real time if available
     displayManager.updateClock(&networkManager);
-
     delay(10); // Small delay to prevent CPU overload
 }

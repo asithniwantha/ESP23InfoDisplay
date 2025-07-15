@@ -58,8 +58,9 @@ String NetworkManager::getLocalIP() {
 void NetworkManager::syncTime() {
     Serial.println("Synchronizing time with NTP servers...");
     
-    // Configure time with NTP servers (GMT+0, no daylight saving)
-    configTime(0, 0, "pool.ntp.org", "time.nist.gov", "time.google.com");
+    // Configure time with NTP servers (Sri Lanka UTC+5:30, no daylight saving)
+    // 5.5 hours = 19800 seconds offset
+    configTime(19800, 0, "pool.ntp.org", "time.nist.gov", "time.google.com");
     
     // Wait for time to be synchronized
     struct tm timeinfo;

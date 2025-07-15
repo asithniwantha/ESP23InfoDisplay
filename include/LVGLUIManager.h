@@ -37,43 +37,34 @@ private:
     lv_obj_t* main_screen;
     lv_obj_t* startup_screen;
     lv_obj_t* clock_screen;
-    
     // Landscape layout cards (top row)
     lv_obj_t* cpu_card;
     lv_obj_t* ram_card;
     lv_obj_t* temp_card;
     lv_obj_t* disk_card;
-    
-    // Progress bars and gauges
     lv_obj_t* cpu_bar;
     lv_obj_t* ram_bar;
     lv_obj_t* disk_bar;
-    lv_obj_t* temp_gauge;
-    lv_meter_indicator_t* temp_needle;
-    
-    // Charts
-    lv_obj_t* cpu_history_chart;
-    lv_obj_t* network_chart;
-    lv_chart_series_t* cpu_history_series;
-    lv_chart_series_t* network_series;
-    
-    // Volume control
-    lv_obj_t* volume_card;
-    lv_obj_t* volume_slider;
-    
-    // Labels for values
     lv_obj_t* cpu_label;
     lv_obj_t* ram_label;
     lv_obj_t* disk_label;
+    lv_obj_t* temp_gauge;
+    lv_meter_indicator_t* temp_needle;
     lv_obj_t* temp_label;
+    lv_obj_t* cpu_history_chart;
+    lv_chart_series_t* cpu_history_series;
+    lv_obj_t* network_chart;
+    lv_chart_series_t* network_series;
     lv_obj_t* network_label;
+    lv_obj_t* volume_card;
+    lv_obj_t* volume_slider;
     lv_obj_t* volume_label;
-    
     // Clock screen objects
     lv_obj_t* clock_time_label;
     lv_obj_t* clock_date_label;
     lv_obj_t* clock_status_label;
     lv_obj_t* clock_ampm_label;  // AM/PM indicator
+    lv_obj_t* clock_seconds_label;
     
     // Helper methods
     void createMainScreen();
