@@ -86,7 +86,7 @@ void DisplayManager::onVolumeChanged(int newVolume) {
 }
 
 void DisplayManager::updateClock() {
-    uiManager.updateClockScreen();
+    uiManager.updateClockScreen(nullptr);
 }
 
 void DisplayManager::updateClock(NetworkManager* networkManager) {
