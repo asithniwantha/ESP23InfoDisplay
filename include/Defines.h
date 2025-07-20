@@ -10,10 +10,11 @@
 #define XPT2046_CLK 25   // T_CLK
 #define XPT2046_CS 33    // T_CS
 
-// Screen dimensions
-#define SCREEN_WIDTH 320
-#define SCREEN_HEIGHT 240
+
 #define FONT_SIZE 2
+
+// LVGL Buffer
+#define LVGL_BUFFER_SIZE (TFT_WIDTH * 10)
 
 // History size for graphs
 #define HISTORY_SIZE 20
